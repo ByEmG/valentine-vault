@@ -11,8 +11,9 @@
 <body>
   <div class="bg"></div>
 
-  <!-- Audio: add unlock.mp3 in repo root -->
+  <!-- Audio files (add later in repo root) -->
   <audio id="unlockAudio" preload="auto" src="unlock.mp3"></audio>
+  <audio id="happyAudio" preload="auto" src="happy.mp3"></audio>
 
   <!-- Fake hacking terminal overlay -->
   <div class="terminal hidden" id="terminal">
@@ -87,18 +88,31 @@
         You unlocked the one message I only wanted <b>you</b> to see.
       </p>
 
+      <!-- Letter + Girlfriend Ask -->
       <div class="proposal">
         <div class="heart">❤️</div>
-        <h3>Will you be my Valentine?</h3>
-        <p class="note">
-          I want a real moment with you — not rushed.  
-          Choose when you’re free and we’ll make it special.
+
+        <h3>A letter for you</h3>
+
+        <p class="note letterText">
+          My love, I’ve been thinking about us and I don’t want to keep it in my head anymore.
+          You make life feel softer, safer, and more exciting at the same time. I don’t want “almost”,
+          I want something real with you — intentional, loyal, and proud. So here I am, choosing you,
+          and asking you to choose me too.
+          <br><br>
+          <span class="sig">— LAETITIA DANIELLE OUEMBE M.</span>
         </p>
+
+        <div class="divider"></div>
+
+        <h3 class="bigAsk">Will you be <span class="accent">MY GIRLFRIEND</span> ?</h3>
 
         <div class="choices">
           <button class="btn primary" id="yesBtn">YES 💘</button>
-          <button class="btn ghost" id="planBtn">Let’s plan it 📅</button>
+          <button class="btn ghost" id="noBtn">NO 🙈</button>
         </div>
+
+        <p class="micro" id="answerNote"></p>
       </div>
 
       <!-- Photo collage reveal -->
@@ -111,15 +125,15 @@
           <div class="tile hidden" id="tile4"><img src="photos/4.jpg" alt="photo 4"></div>
         </div>
         <p class="micro">
-          Put your photos in a folder named <b>photos</b> in the repo:
+          Put your photos in a folder named <b>photos</b>:
           <b>photos/1.jpg</b> … <b>photos/4.jpg</b>
         </p>
       </div>
 
-      <!-- Final screen -->
+      <!-- Calendar + Teddy animation + final message -->
       <div class="final hidden" id="final">
         <h3>Pick our moment 📆</h3>
-        <p class="note">Choose the date that works best, then generate a message to send.</p>
+        <p class="note">Choose the date/time that works for you. He’ll make it happen.</p>
 
         <div class="dateRow">
           <input id="datePick" type="date" />
@@ -127,11 +141,35 @@
           <button class="btn primary" id="genBtn">Generate message</button>
         </div>
 
+        <!-- Teddy animation scene -->
+        <div class="teddyScene hidden" id="teddyScene" aria-hidden="true">
+          <div class="teddy" id="teddy">
+            <div class="ear left"></div>
+            <div class="ear right"></div>
+            <div class="head"></div>
+            <div class="face">
+              <div class="eye left"></div>
+              <div class="eye right"></div>
+              <div class="nose"></div>
+              <div class="mouth"></div>
+            </div>
+            <div class="body"></div>
+            <div class="arm left"></div>
+            <div class="arm right"></div>
+            <div class="thumb hidden" id="thumb">👍</div>
+          </div>
+
+          <div class="letter" id="animLetter">💌</div>
+          <div class="mailbox" id="mailbox">📮</div>
+        </div>
+
         <div class="copyBox hidden" id="copyBox">
           <p class="copyTitle">Send him this:</p>
           <textarea id="messageOut" readonly></textarea>
           <button class="btn ghost" id="copyBtn">Copy</button>
         </div>
+
+        <p class="happy hidden" id="happyMsg">He will be so happy ✅</p>
       </div>
 
       <p class="footerLove">— from him to you, always.</p>
