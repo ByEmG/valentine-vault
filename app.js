@@ -31,7 +31,7 @@ const terminalBody = $("terminalBody");
 
 // Music
 const bgAudio = $("bgAudio");
-const musicGate = $("musicGate");
+const musicBtn = $("musicBtn");
 
 // Letter -> Ask
 const nextToAsk = $("nextToAsk");
@@ -40,10 +40,6 @@ const nextToAsk = $("nextToAsk");
 const yesBtn = $("yesBtn");
 const noBtn = $("noBtn");
 const answerNote = $("answerNote");
-
-// Photos
-const tile1 = $("tile1");
-const tile2 = $("tile2");
 
 // Plan
 const datePick = $("datePick");
@@ -71,6 +67,7 @@ let timeLeft = TIMER_SECONDS;
 let tickHandle = null;
 let lockedOut = false;
 let girlfriendAnswer = "";
+let musicOn = false;
 
 // Utils
 function normalize(s){ return (s||"").trim().toLowerCase().replace(/\s+/g," "); }
@@ -90,80 +87,30 @@ function shake(el){
              {duration:260,easing:"ease-out"});
 }
 
-// ------------------------
-// MUSIC MANAGER (best possible “start on launch”)
-// - tries instantly
-// - if blocked, starts on first user gesture (tap/click/scroll/keydown)
-// - shows a tiny pill only if needed
-// ------------------------
-let musicStarted = false;
-
-async function startBgMusic(force=false){
-  if(!bgAudio) return false;
-  if(musicStarted) return true;
-
-  try{
-    bgAudio.loop = true;
-    bgAudio.volume = 0.75;
-    bgAudio.muted = false;
-
-    const p = bgAudio.play();
-    if(p) await p;
-
-    musicStarted = true;
-    if(musicGate) musicGate.classList.add("hidden");
-    return true;
-  }catch{
-    // autoplay blocked
-    if(musicGate) musicGate.classList.remove("hidden");
-
-    // iOS trick: sometimes muted play succeeds, then we unmute on gesture
-    if(!force){
-      try{
-        bgAudio.muted = true;
-        const p2 = bgAudio.play();
-        if(p2) await p2;
-        // still mark started but keep muted; next gesture will unmute
-        musicStarted = true;
-        if(musicGate) musicGate.classList.remove("hidden");
-        return true;
-      }catch{}
-    }
-
-    return false;
-  }
-}
-
-function forceUnmute(){
+// Music controls
+async function playMusic(){
   if(!bgAudio) return;
   try{
+    bgAudio.loop = true;
     bgAudio.muted = false;
     bgAudio.volume = 0.75;
-    if(bgAudio.paused) bgAudio.play();
-    if(musicGate) musicGate.classList.add("hidden");
-  }catch{}
-}
-
-function bindMusicFallbackTriggers(){
-  const onUser = async () => {
-    await startBgMusic(true);
-    forceUnmute();
-  };
-
-  window.addEventListener("touchstart", onUser, { once:true, passive:true });
-  window.addEventListener("click", onUser, { once:true, passive:true });
-  window.addEventListener("keydown", onUser, { once:true });
-  window.addEventListener("scroll", onUser, { once:true, passive:true });
-
-  if(musicGate){
-    musicGate.addEventListener("click", onUser);
+    const p = bgAudio.play();
+    if(p) await p;
+    musicOn = true;
+    if(musicBtn) musicBtn.textContent = "⏸ Pause music";
+  }catch{
+    // iOS might block until user taps (but this function is called by a tap, so should work)
   }
-
-  document.addEventListener("visibilitychange", () => {
-    if(!document.hidden){
-      startBgMusic();
-    }
-  });
+}
+function pauseMusic(){
+  if(!bgAudio) return;
+  try{ bgAudio.pause(); }catch{}
+  musicOn = false;
+  if(musicBtn) musicBtn.textContent = "▶ Play music";
+}
+async function toggleMusic(){
+  if(musicOn) pauseMusic();
+  else await playMusic();
 }
 
 // Lockout
@@ -326,21 +273,12 @@ function showStep(step){
   step.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
-// Photo reveal
-async function revealPhotos(){
-  tile1.classList.remove("hidden");
-  await sleep(360);
-  tile2.classList.remove("hidden");
-}
-
 // Unlock flow
 async function unlock(){
   setStatus("ok","Key accepted. Decrypting…");
   clearInterval(tickHandle);
 
-  // try starting music right now (if not already started)
-  await startBgMusic();
-
+  // If music isn't playing yet, the button is there; do not force autoplay.
   await terminalSequence();
 
   startConfetti();
@@ -348,10 +286,7 @@ async function unlock(){
 }
 
 // Ask step
-function goAsk(){
-  showStep(stepAsk);
-  revealPhotos();
-}
+function goAsk(){ showStep(stepAsk); }
 
 // Calendar step
 function goPlan(note){
@@ -359,7 +294,7 @@ function goPlan(note){
   showStep(stepPlan);
 }
 
-// Teddy then video (keeps your flow)
+// Generate message
 function generateMessage(){
   const d = datePick.value;
   const t = timePick.value;
@@ -400,15 +335,12 @@ Let’s make it a real moment.
   }, 2400);
 }
 
-// Video: make sure bg music is muted/paused when video starts
+// Video: mute/pause background music so video audio is clean
 async function playVideo(){
-  try{
-    if(bgAudio){
-      bgAudio.pause();
-      bgAudio.muted = true;
-      bgAudio.volume = 0;
-    }
-  }catch{}
+  pauseMusic(); // stops bg music
+  if(bgAudio){
+    try{ bgAudio.muted = true; bgAudio.volume = 0; }catch{}
+  }
 
   videoWrap.classList.remove("hidden");
   compVideo.currentTime = 0;
@@ -418,9 +350,10 @@ async function playVideo(){
 // Init
 function init(){
 
-  // Music: try immediately + bind fallbacks for iOS
-  bindMusicFallbackTriggers();
-  startBgMusic(); // attempts on load
+  // Music button (reliable on iPhone)
+  if(musicBtn){
+    musicBtn.addEventListener("click", toggleMusic);
+  }
 
   attemptsEl.textContent = String(attempts);
   applyLockState();
@@ -453,28 +386,19 @@ function init(){
     resetTimer();
   });
 
-  nextToAsk.addEventListener("click", () => {
-    // also forces unmute if iOS started muted
-    forceUnmute();
-    goAsk();
-  });
+  nextToAsk.addEventListener("click", goAsk);
 
   yesBtn.addEventListener("click", () => {
     girlfriendAnswer = "YES";
-    forceUnmute();
     goPlan("She said YES 💘 Now choose a date/time.");
   });
 
   noBtn.addEventListener("click", () => {
     girlfriendAnswer = "NO";
-    forceUnmute();
     goPlan("She said NO 🙈 Now choose a date/time to talk properly.");
   });
 
-  genBtn.addEventListener("click", () => {
-    forceUnmute();
-    generateMessage();
-  });
+  genBtn.addEventListener("click", generateMessage);
 
   copyBtn.addEventListener("click", async () => {
     try{
@@ -489,14 +413,10 @@ function init(){
   playVideoBtn.addEventListener("click", playVideo);
 
   compVideo.addEventListener("play", () => {
-    try{
-      if(bgAudio){
-        bgAudio.pause();
-        bgAudio.muted = true;
-        bgAudio.volume = 0;
-      }
-    }catch{}
+    pauseMusic();
+    try{ if(bgAudio){ bgAudio.muted = true; bgAudio.volume = 0; } }catch{}
   });
 }
 
 init();
+
