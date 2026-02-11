@@ -4,8 +4,8 @@ const TIMER_SECONDS = 180;
 const LOCKOUT_MINUTES = 10;
 const STORAGE_KEY = "valentineVaultLockoutUntil";
 
-const HIM_NAME = "My Love";
-const HER_NAME = "Baby";
+const HIM_NAME = "Pierre-Emmanuel";
+const HER_NAME = "Laetitia";
 
 const $ = (id) => document.getElementById(id);
 
@@ -50,6 +50,7 @@ const happyMsg = $("happyMsg");
 const copyBox = $("copyBox");
 const messageOut = $("messageOut");
 const copyBtn = $("copyBtn");
+const goVideoBtn = $("goVideoBtn");
 
 // Video
 const playVideoBtn = $("playVideoBtn");
@@ -66,7 +67,7 @@ let attempts = ATTEMPTS_MAX;
 let timeLeft = TIMER_SECONDS;
 let tickHandle = null;
 let lockedOut = false;
-let girlfriendAnswer = "";
+let valentineAnswer = "";
 let musicOn = false;
 
 // Utils
@@ -87,19 +88,21 @@ function shake(el){
              {duration:260,easing:"ease-out"});
 }
 
-// Music controls
+// MUSIC (reliable)
 async function playMusic(){
   if(!bgAudio) return;
   try{
+    bgAudio.load();           // ensure it loads
     bgAudio.loop = true;
     bgAudio.muted = false;
     bgAudio.volume = 0.75;
-    const p = bgAudio.play();
-    if(p) await p;
+
+    await bgAudio.play();     // must be triggered by click
     musicOn = true;
     if(musicBtn) musicBtn.textContent = "⏸ Pause music";
-  }catch{
-    // iOS might block until user taps (but this function is called by a tap, so should work)
+  }catch (err){
+    console.log("Music play failed:", err);
+    alert("Music couldn't play. Make sure assets/bg.mp3 exists and try again.");
   }
 }
 function pauseMusic(){
@@ -226,8 +229,6 @@ async function terminalSequence(){
     ">> checksum: OK",
     ">> decrypting payload: LOVE_FLOW.enc",
     ">> bypassing firewall: butterflies.exe",
-    ">> elevating permissions: her_access=true",
-    ">> restoring memories…",
     ">> AUTH SUCCESS ✅",
     ">> opening vault…"
   ];
@@ -249,7 +250,6 @@ function validate(){
 
   if(!q1||!q2||!q3) return {ok:false,msg:"Answer all fields 🙂"};
   if(!q4ok) return {ok:false,msg:"Q4 needs ALL 3 ticked 😌"};
-
   if(q1!==EXPECTED.q1) return {ok:false,msg:"Q1 is wrong 😅"};
   if(q2!==EXPECTED.q2) return {ok:false,msg:"Q2 is wrong 😅"};
   if(q3!==EXPECTED.q3) return {ok:false,msg:"Q3 is wrong 😅 (use 10/10/25 style)"};
@@ -277,27 +277,19 @@ function showStep(step){
 async function unlock(){
   setStatus("ok","Key accepted. Decrypting…");
   clearInterval(tickHandle);
-
-  // If music isn't playing yet, the button is there; do not force autoplay.
   await terminalSequence();
-
   startConfetti();
   showStep(stepLetter);
 }
 
-// Ask step
 function goAsk(){ showStep(stepAsk); }
+function goPlan(note){ answerNote.textContent = note; showStep(stepPlan); }
 
-// Calendar step
-function goPlan(note){
-  answerNote.textContent = note;
-  showStep(stepPlan);
-}
-
-// Generate message
+// Generate message (so YOU can see her selected date & time)
 function generateMessage(){
   const d = datePick.value;
   const t = timePick.value;
+
   if(!d){ alert("Pick a date first 🙂"); return; }
 
   const readableDate = (() => {
@@ -310,14 +302,15 @@ function generateMessage(){
   const timePart = t ? ` at ${t}` : "";
 
   messageOut.value =
-`Hey ${HIM_NAME} 💗
+`VALENTINE VAULT 💗
 
-I unlocked your vault 😌
+Answer: ${valentineAnswer}
 
-Answer: ${girlfriendAnswer}
+Chosen date: ${readableDate}${timePart}
 
-I’m free on ${readableDate}${timePart}.
-Let’s make it a real moment.
+Message:
+Hey ${HIM_NAME} 💗
+I’m free on ${readableDate}${timePart}. Let’s make it a real moment.
 
 — ${HER_NAME}`;
 
@@ -329,28 +322,32 @@ Let’s make it a real moment.
   teddyScene.classList.add("play");
 
   happyMsg.classList.add("hidden");
-  setTimeout(() => {
-    happyMsg.classList.remove("hidden");
-    showStep(stepVideo);
-  }, 2400);
+  setTimeout(() => happyMsg.classList.remove("hidden"), 2400);
 }
 
-// Video: mute/pause background music so video audio is clean
+// Video
 async function playVideo(){
-  pauseMusic(); // stops bg music
-  if(bgAudio){
-    try{ bgAudio.muted = true; bgAudio.volume = 0; }catch{}
-  }
+  // pause bg music so video audio is heard
+  pauseMusic();
+  try{
+    if(bgAudio){ bgAudio.muted = true; bgAudio.volume = 0; }
+  }catch{}
 
   videoWrap.classList.remove("hidden");
   compVideo.currentTime = 0;
-  try{ await compVideo.play(); }catch{}
+
+  try{
+    await compVideo.play();
+  }catch (err){
+    console.log("Video play failed:", err);
+    alert("Video couldn't play. Make sure assets/video.mp4 exists and try again.");
+  }
 }
 
 // Init
 function init(){
 
-  // Music button (reliable on iPhone)
+  // Music button
   if(musicBtn){
     musicBtn.addEventListener("click", toggleMusic);
   }
@@ -358,7 +355,6 @@ function init(){
   attemptsEl.textContent = String(attempts);
   applyLockState();
   startTimer();
-
   showStep(stepQuiz);
 
   quizForm.addEventListener("submit", async (e) => {
@@ -389,13 +385,13 @@ function init(){
   nextToAsk.addEventListener("click", goAsk);
 
   yesBtn.addEventListener("click", () => {
-    girlfriendAnswer = "YES";
+    valentineAnswer = "YES";
     goPlan("She said YES 💘 Now choose a date/time.");
   });
 
   noBtn.addEventListener("click", () => {
-    girlfriendAnswer = "NO";
-    goPlan("She said NO 🙈 Now choose a date/time to talk properly.");
+    valentineAnswer = "NO";
+    goPlan("She said NO 🙈 Now choose a date/time.");
   });
 
   genBtn.addEventListener("click", generateMessage);
@@ -410,6 +406,7 @@ function init(){
     }
   });
 
+  goVideoBtn.addEventListener("click", () => showStep(stepVideo));
   playVideoBtn.addEventListener("click", playVideo);
 
   compVideo.addEventListener("play", () => {
