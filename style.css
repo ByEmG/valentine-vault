@@ -424,3 +424,27 @@ video{
 }
 .musicGate:hover{transform: translateX(-50%) translateY(-1px);}
 .musicGate:active{transform: translateX(-50%) translateY(0px) scale(.99);}
+
+/* Music button (premium, matches aesthetic) */
+.musicBtn{
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 2000;
+
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.35);
+  color: rgba(255,255,255,.92);
+  backdrop-filter: blur(12px);
+
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 850;
+  letter-spacing: .2px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.40);
+  cursor: pointer;
+}
+.musicBtn:hover{transform: translateX(-50%) translateY(-1px);}
+.musicBtn:active{transform: translateX(-50%) translateY(0px) scale(.99);}
+
