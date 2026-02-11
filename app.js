@@ -1,5 +1,5 @@
 // ======================================================
-// Valentine Vault — customized to YOUR exact Q/A
+// Valentine Vault — updated version
 // - No case sensitivity
 // - Date accepts slashes/dashes; compares digits only
 // - Q4 requires ALL three checkboxes
@@ -7,24 +7,25 @@
 // - Fake terminal animation on unlock
 // - Audio fades in on unlock (unlock.mp3)
 // - Photo collage reveals piece-by-piece (photos/1.jpg..4.jpg)
-// - Final screen: pick a date + message generator
+// - Girlfriend ask YES/NO -> calendar
+// - Generate message -> teddy animation -> "He will be so happy ✅"
+// - After that message: autoplay happy.mp3 (max 60s)
 // ======================================================
 
 const EXPECTED = {
-  q1: "mimineee",     // Q1
-  q2: "brown",        // Q2 (brown / Brown / etc)
-  q3_digits: "101026" // Q3: 10/10/26 (digits only)
+  q1: "mimineee",
+  q2: "brown",
+  q3_digits: "101026" // 10/10/26
 };
 
-// Settings
 const ATTEMPTS_MAX = 5;
 const TIMER_SECONDS = 180;        // 03:00
-const LOCKOUT_MINUTES = 10;       // after attempts hit 0
+const LOCKOUT_MINUTES = 10;
 const STORAGE_KEY = "valentineVaultLockoutUntil";
 
-// Personalize final message (optional)
-const HIM_NAME = "My Love"; // or your name
-const HER_NAME = "Baby";    // what you want it to say
+// You can rename these if you want
+const HIM_NAME = "My Love";
+const HER_NAME = "Baby";
 
 // DOM helpers
 const $ = (id) => document.getElementById(id);
@@ -43,10 +44,13 @@ const attemptsEl = $("attempts");
 
 const terminal = $("terminal");
 const terminalBody = $("terminalBody");
-const audioEl = $("unlockAudio");
+
+const unlockAudio = $("unlockAudio");
+const happyAudio = $("happyAudio");
 
 const yesBtn = $("yesBtn");
-const planBtn = $("planBtn");
+const noBtn = $("noBtn");
+const answerNote = $("answerNote");
 
 const tile1 = $("tile1");
 const tile2 = $("tile2");
@@ -57,6 +61,10 @@ const final = $("final");
 const datePick = $("datePick");
 const timePick = $("timePick");
 const genBtn = $("genBtn");
+
+const teddyScene = $("teddyScene");
+const happyMsg = $("happyMsg");
+
 const copyBox = $("copyBox");
 const messageOut = $("messageOut");
 const copyBtn = $("copyBtn");
@@ -74,32 +82,33 @@ let attempts = ATTEMPTS_MAX;
 let timeLeft = TIMER_SECONDS;
 let tickHandle = null;
 let lockedOut = false;
+let girlfriendAnswer = ""; // "YES" or "NO"
 
+// ------------------------
+// Utilities
+// ------------------------
 function normalize(str){
   return (str || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
-
 function digitsOnly(str){
-  return (str || "").replace(/\D/g, ""); // keep only 0-9
+  return (str || "").replace(/\D/g, "");
 }
-
 function setStatus(type, msg){
   statusEl.className = "status " + (type || "");
   statusEl.textContent = msg || "";
 }
-
 function formatTime(s){
   const mm = String(Math.floor(s / 60)).padStart(2,"0");
   const ss = String(s % 60).padStart(2,"0");
   return `${mm}:${ss}`;
 }
-
 function shake(el){
   el.animate(
     [{transform:"translateX(0)"},{transform:"translateX(-6px)"},{transform:"translateX(6px)"},{transform:"translateX(0)"}],
     {duration: 260, easing:"ease-out"}
   );
 }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 // ------------------------
 // Lockout handling
@@ -110,17 +119,19 @@ function getLockoutUntil(){
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
-
 function setLockoutMinutes(mins){
   const until = Date.now() + mins * 60 * 1000;
   localStorage.setItem(STORAGE_KEY, String(until));
   return until;
 }
-
 function clearLockout(){
   localStorage.removeItem(STORAGE_KEY);
 }
-
+function disableForm(disabled){
+  ["q1","q2","q3"].forEach(id => $(id).disabled = disabled);
+  [c1,c2,c3].forEach(x => x.disabled = disabled);
+  quizForm.querySelector('button[type="submit"]').disabled = disabled;
+}
 function applyLockState(){
   const until = getLockoutUntil();
   if(until > Date.now()){
@@ -136,18 +147,11 @@ function applyLockState(){
   }
 }
 
-function disableForm(disabled){
-  ["q1","q2","q3"].forEach(id => $(id).disabled = disabled);
-  [c1,c2,c3].forEach(x => x.disabled = disabled);
-  quizForm.querySelector('button[type="submit"]').disabled = disabled;
-}
-
 // ------------------------
 // Timer
 // ------------------------
 function startTimer(){
   timerEl.textContent = formatTime(timeLeft);
-
   tickHandle = setInterval(() => {
     if(lockedOut) return;
 
@@ -162,7 +166,6 @@ function startTimer(){
     }
   }, 1000);
 }
-
 function resetTimer(){
   clearInterval(tickHandle);
   timeLeft = TIMER_SECONDS;
@@ -193,7 +196,6 @@ function makeConfetti(n=150){
     vr: -0.08 + Math.random() * 0.16
   }));
 }
-
 function drawConfetti(){
   if(!confettiRunning) return;
   ctx.clearRect(0,0,W,H);
@@ -214,7 +216,6 @@ function drawConfetti(){
   }
   requestAnimationFrame(drawConfetti);
 }
-
 function startConfetti(){
   confettiRunning = true;
   makeConfetti();
@@ -225,19 +226,17 @@ function startConfetti(){
 // ------------------------
 // Terminal animation
 // ------------------------
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
 async function terminalSequence(){
   terminal.classList.remove("hidden");
   terminalBody.textContent = "";
 
   const lines = [
-    ">> connecting to VALENTINE_VAULT…",
+    ">> connecting to GIRLFRIEND_PROTOCOL…",
     ">> verifying key fragments…",
     ">> checksum: OK",
-    ">> decrypting payload: HEART_PROTOCOL.v1",
+    ">> decrypting payload: LOVE_LETTER.enc",
     ">> bypassing firewall: butterflies.exe",
-    ">> elevating permissions: girlfriend_mode=true",
+    ">> elevating permissions: her_access=true",
     ">> extracting memory files…",
     ">> AUTH SUCCESS ✅",
     ">> opening vault…"
@@ -246,7 +245,7 @@ async function terminalSequence(){
   for(const l of lines){
     terminalBody.textContent += l + "\n";
     terminalBody.scrollTop = terminalBody.scrollHeight;
-    await sleep(250 + Math.random()*180);
+    await sleep(230 + Math.random()*170);
   }
 
   await sleep(600);
@@ -254,22 +253,37 @@ async function terminalSequence(){
 }
 
 // ------------------------
-// Audio fade in
+// Audio
 // ------------------------
-async function fadeInAudio(){
-  if(!audioEl) return;
-
+async function fadeInUnlockAudio(){
+  if(!unlockAudio) return;
   try{
-    audioEl.volume = 0;
-    await audioEl.play();
-
-    const steps = 24;
-    for(let i=1; i<=steps; i++){
-      audioEl.volume = Math.min(1, i/steps);
+    unlockAudio.volume = 0;
+    await unlockAudio.play();
+    const steps = 22;
+    for(let i=1;i<=steps;i++){
+      unlockAudio.volume = Math.min(1, i/steps);
       await sleep(70);
     }
   }catch{
-    // If autoplay blocked: user will still see everything; audio just won't play
+    // If blocked, it's fine—visuals still run
+  }
+}
+
+async function playHappyAudioFor60s(){
+  if(!happyAudio) return;
+  try{
+    happyAudio.currentTime = 0;
+    happyAudio.volume = 1;
+    await happyAudio.play();
+    setTimeout(() => {
+      try{
+        happyAudio.pause();
+        happyAudio.currentTime = 0;
+      }catch{}
+    }, 60000);
+  }catch{
+    // Autoplay might still fail on some devices if user has muted settings
   }
 }
 
@@ -277,7 +291,6 @@ async function fadeInAudio(){
 // Collage reveal
 // ------------------------
 async function revealCollage(){
-  // tiles already exist; we reveal with stagger
   const tiles = [tile1,tile2,tile3,tile4];
   for(const t of tiles){
     t.classList.remove("hidden");
@@ -291,16 +304,12 @@ async function revealCollage(){
 function validate(){
   const q1 = normalize($("q1").value);
   const q2 = normalize($("q2").value);
-  const q3 = digitsOnly($("q3").value); // accepts 10/10/26, 10-10-26, etc
+  const q3 = digitsOnly($("q3").value);
 
   const q4ok = c1.checked && c2.checked && c3.checked;
 
-  if(!q1 || !q2 || !q3){
-    return { ok:false, msg:"Answer all fields 🙂" };
-  }
-  if(!q4ok){
-    return { ok:false, msg:"Q4 needs ALL 3 ticked 😌" };
-  }
+  if(!q1 || !q2 || !q3) return { ok:false, msg:"Answer all fields 🙂" };
+  if(!q4ok) return { ok:false, msg:"Q4 needs ALL 3 ticked 😌" };
 
   if(q1 !== EXPECTED.q1) return { ok:false, msg:"Q1 is wrong 😅" };
   if(q2 !== EXPECTED.q2) return { ok:false, msg:"Q2 is wrong 😅" };
@@ -312,7 +321,6 @@ function validate(){
 function decrementAttempts(){
   attempts -= 1;
   attemptsEl.textContent = String(attempts);
-
   if(attempts <= 0){
     setStatus("bad", `Too many attempts. Locked for ${LOCKOUT_MINUTES} minutes.`);
     setLockoutMinutes(LOCKOUT_MINUTES);
@@ -325,35 +333,33 @@ function decrementAttempts(){
 // ------------------------
 async function unlock(){
   setStatus("ok", "Key accepted. Decrypting…");
-
-  // Pause timer
   clearInterval(tickHandle);
 
-  // Terminal animation + audio fade start
   await Promise.all([
     terminalSequence(),
-    fadeInAudio()
+    fadeInUnlockAudio()
   ]);
 
-  // Show unlocked view
   lockedView.classList.add("hidden");
   unlockedView.classList.remove("hidden");
 
-  // Confetti + collage reveal
   startConfetti();
   await revealCollage();
+}
 
-  // Show final planning UI
+// ------------------------
+// Calendar & message generation + teddy animation
+// ------------------------
+function showCalendar(note){
+  answerNote.textContent = note;
   final.classList.remove("hidden");
   final.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
-// ------------------------
-// Planner message generation
-// ------------------------
 function generateMessage(){
-  const d = datePick.value; // yyyy-mm-dd
-  const t = timePick.value; // hh:mm
+  const d = datePick.value;
+  const t = timePick.value;
+
   if(!d){
     alert("Pick a date first 🙂");
     return;
@@ -374,29 +380,38 @@ function generateMessage(){
 `Hey ${HIM_NAME} 💗
 
 I unlocked your vault 😌
-Yes — I’ll be your Valentine.
+
+Answer: ${girlfriendAnswer}
 
 I’m free on ${readableDate}${timePart}.
-Pick the place and surprise me 👀✨
+Let’s make it a real moment.
 
 — ${HER_NAME}`;
 
   messageOut.value = msg;
   copyBox.classList.remove("hidden");
-  copyBox.scrollIntoView({behavior:"smooth", block:"start"});
+
+  // Teddy animation
+  teddyScene.classList.remove("hidden");
+  teddyScene.classList.remove("play");
+  void teddyScene.offsetWidth; // restart animation
+  teddyScene.classList.add("play");
+
+  // Show final happiness message + play happy song (max 60s)
+  happyMsg.classList.add("hidden");
+  setTimeout(async () => {
+    happyMsg.classList.remove("hidden");
+    copyBox.scrollIntoView({behavior:"smooth", block:"start"});
+    await playHappyAudioFor60s();
+  }, 2400);
 }
 
 // ------------------------
 // Init
 // ------------------------
 function init(){
-  // Attempts
   attemptsEl.textContent = String(attempts);
-
-  // Lockout state
   applyLockState();
-
-  // Timer start
   startTimer();
 
   quizForm.addEventListener("submit", async (e) => {
@@ -419,7 +434,6 @@ function init(){
   });
 
   resetBtn.addEventListener("click", () => {
-    // Reset everything
     quizForm.reset();
     setStatus("", "");
     attempts = ATTEMPTS_MAX;
@@ -429,14 +443,14 @@ function init(){
     resetTimer();
   });
 
-  // Buttons on unlocked view
   yesBtn.addEventListener("click", () => {
-    final.classList.remove("hidden");
-    final.scrollIntoView({behavior:"smooth", block:"start"});
+    girlfriendAnswer = "YES";
+    showCalendar("She said YES 💘 Now choose a date/time.");
   });
-  planBtn.addEventListener("click", () => {
-    final.classList.remove("hidden");
-    final.scrollIntoView({behavior:"smooth", block:"start"});
+
+  noBtn.addEventListener("click", () => {
+    girlfriendAnswer = "NO";
+    showCalendar("She said NO 🙈 Now choose a date/time to talk properly.");
   });
 
   genBtn.addEventListener("click", generateMessage);
