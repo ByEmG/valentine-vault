@@ -11,9 +11,11 @@
 <body>
   <div class="bg"></div>
 
-  <!-- Audio files (add later in repo root) -->
+  <!-- Background music (add bg.mp3 in repo root). Loop across the experience. -->
+  <audio id="bgAudio" preload="auto" src="bg.mp3" loop></audio>
+
+  <!-- Unlock sound (optional: add unlock.mp3 in repo root). -->
   <audio id="unlockAudio" preload="auto" src="unlock.mp3"></audio>
-  <audio id="happyAudio" preload="auto" src="happy.mp3"></audio>
 
   <!-- Fake hacking terminal overlay -->
   <div class="terminal hidden" id="terminal">
@@ -40,7 +42,7 @@
       <h1>Decrypt the Key 💗</h1>
       <p class="hint">
         Answer the questions. No case sensitivity.
-        <br><span class="muter">Tip: for the date, write it like <b>10/10/26</b> (slashes or dashes are OK).</span>
+        <br><span class="muter">Tip: for the date, write it like <b>10/10/25</b> (slashes or dashes are OK).</span>
       </p>
 
       <form id="quizForm" autocomplete="off" novalidate>
@@ -56,7 +58,8 @@
 
         <div class="q">
           <label for="q3">Q3) When did he propose to you?</label>
-          <input id="q3" name="q3" type="text" placeholder="Example: 10/10/26" required />
+          <input id="q3" name="q3" type="text" placeholder="Example: 10/10/25" required />
+          <div class="micro">wow soon 6months</div>
         </div>
 
         <div class="q">
@@ -88,10 +91,9 @@
         You unlocked the one message I only wanted <b>you</b> to see.
       </p>
 
-      <!-- Letter + Girlfriend Ask -->
-      <div class="proposal">
+      <!-- STEP 1: LETTER (ALONE) -->
+      <div class="proposal" id="letterStep">
         <div class="heart">❤️</div>
-
         <h3>A letter for you</h3>
 
         <p class="note letterText">
@@ -103,7 +105,14 @@
           <span class="sig">— LAETITIA DANIELLE OUEMBE M.</span>
         </p>
 
-        <div class="divider"></div>
+        <div class="actions">
+          <button class="btn primary" id="nextBtn">Next ➜</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: GIRLFRIEND ASK -->
+      <div class="proposal hidden" id="askStep">
+        <div class="heart">❤️</div>
 
         <h3 class="bigAsk">Will you be <span class="accent">MY GIRLFRIEND</span> ?</h3>
 
@@ -115,22 +124,16 @@
         <p class="micro" id="answerNote"></p>
       </div>
 
-      <!-- Photo collage reveal -->
-      <div class="collageWrap">
+      <!-- 2-photo collage -->
+      <div class="collageWrap hidden" id="collageWrap">
         <h4 class="collageTitle">Memory files restoring…</h4>
-        <div class="collage" id="collage">
-          <div class="tile hidden" id="tile1"><img src="photos/1.jpg" alt="photo 1"></div>
-          <div class="tile hidden" id="tile2"><img src="photos/2.jpg" alt="photo 2"></div>
-          <div class="tile hidden" id="tile3"><img src="photos/3.jpg" alt="photo 3"></div>
-          <div class="tile hidden" id="tile4"><img src="photos/4.jpg" alt="photo 4"></div>
+        <div class="collage two" id="collage">
+          <div class="tile small hidden" id="tile1"><img src="photos/1.jpg" alt="photo 1"></div>
+          <div class="tile small hidden" id="tile2"><img src="photos/2.jpg" alt="photo 2"></div>
         </div>
-        <p class="micro">
-          Put your photos in a folder named <b>photos</b>:
-          <b>photos/1.jpg</b> … <b>photos/4.jpg</b>
-        </p>
       </div>
 
-      <!-- Calendar + Teddy animation + final message -->
+      <!-- Calendar + Teddy animation -->
       <div class="final hidden" id="final">
         <h3>Pick our moment 📆</h3>
         <p class="note">Choose the date/time that works for you. He’ll make it happen.</p>
@@ -141,7 +144,6 @@
           <button class="btn primary" id="genBtn">Generate message</button>
         </div>
 
-        <!-- Teddy animation scene -->
         <div class="teddyScene hidden" id="teddyScene" aria-hidden="true">
           <div class="teddy" id="teddy">
             <div class="ear left"></div>
@@ -170,6 +172,20 @@
         </div>
 
         <p class="happy hidden" id="happyMsg">He will be so happy ✅</p>
+      </div>
+
+      <!-- VIDEO COMPILATION (appears after teddy + music ends) -->
+      <div class="final hidden" id="videoStep">
+        <h3>Your video compilation 🎬</h3>
+        <p class="note">Tap play — background music will mute automatically so you hear the video.</p>
+
+        <div class="actions">
+          <button class="btn primary" id="playVideoBtn">Play video ▶</button>
+        </div>
+
+        <div class="videoWrap hidden" id="videoWrap">
+          <video id="compVideo" controls playsinline preload="auto" src="video.mp4"></video>
+        </div>
       </div>
 
       <p class="footerLove">— from him to you, always.</p>
