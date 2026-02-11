@@ -199,7 +199,6 @@ input:focus{border-color: rgba(255,77,166,.45); box-shadow: 0 0 0 4px rgba(255,7
 .tile img{width:100%; height:100%; object-fit: cover; display:block;}
 @keyframes tileIn{to{transform: translateY(0); opacity:1}}
 
-/* final blocks */
 .final{
   margin-top: 16px;
   border:1px solid rgba(255,255,255,.10);
@@ -354,7 +353,6 @@ textarea{
 @keyframes armWave2{0%{transform: rotate(0)}50%{transform: rotate(25deg)}100%{transform: rotate(0)}}
 @keyframes thumbPop{from{transform: scale(.6); opacity:0}to{transform: scale(1); opacity:1}}
 
-/* Video */
 .videoWrap{margin-top: 12px;}
 video{
   width: 100%;
@@ -403,3 +401,26 @@ video{
 
 #confetti{position:fixed; inset:0; pointer-events:none;}
 
+/* Music pill (only shows if autoplay blocked) */
+.musicGate{
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 2000;
+
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.35);
+  color: rgba(255,255,255,.92);
+  backdrop-filter: blur(12px);
+
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 850;
+  letter-spacing: .2px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.40);
+
+  cursor: pointer;
+}
+.musicGate:hover{transform: translateX(-50%) translateY(-1px);}
+.musicGate:active{transform: translateX(-50%) translateY(0px) scale(.99);}
