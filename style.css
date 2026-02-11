@@ -1,543 +1,405 @@
-// ======================================================
-// Valentine Vault — final spec updates
-// - Background music loops across pages (bg.mp3)
-// - Date answer is 10/10/25 (digits: 101025)
-// - Helper text under Q3: "wow soon 6months" (in HTML)
-// - Only 2 images (photos/1.jpg, photos/2.jpg) small rectangles
-// - After unlock: show LETTER step alone -> Next -> girlfriend ask
-// - After teddy animation: background music ends, then video section appears
-// - When video plays: background music is paused/muted automatically
-// ======================================================
-
-const EXPECTED = {
-  q1: "mimineee",
-  q2: "brown",
-  q3_digits: "101025" // 10/10/25
-};
-
-const ATTEMPTS_MAX = 5;
-const TIMER_SECONDS = 180;
-const LOCKOUT_MINUTES = 10;
-const STORAGE_KEY = "valentineVaultLockoutUntil";
-
-// Optional text in generated message
-const HIM_NAME = "My Love";
-const HER_NAME = "Baby";
-
-// DOM
-const $ = (id) => document.getElementById(id);
-
-const quizForm = $("quizForm");
-const statusEl = $("status");
-const resetBtn = $("resetBtn");
-const lockNote = $("lockNote");
-
-const lockedView = $("lockedView");
-const unlockedView = $("unlockedView");
-
-const timerEl = $("timer");
-const attemptsEl = $("attempts");
-
-const terminal = $("terminal");
-const terminalBody = $("terminalBody");
-
-const bgAudio = $("bgAudio");
-const unlockAudio = $("unlockAudio");
-
-// Unlocked flow steps
-const letterStep = $("letterStep");
-const nextBtn = $("nextBtn");
-
-const askStep = $("askStep");
-const yesBtn = $("yesBtn");
-const noBtn = $("noBtn");
-const answerNote = $("answerNote");
-
-const collageWrap = $("collageWrap");
-const tile1 = $("tile1");
-const tile2 = $("tile2");
-
-const final = $("final");
-const datePick = $("datePick");
-const timePick = $("timePick");
-const genBtn = $("genBtn");
-
-const teddyScene = $("teddyScene");
-const happyMsg = $("happyMsg");
-
-const copyBox = $("copyBox");
-const messageOut = $("messageOut");
-const copyBtn = $("copyBtn");
-
-// Video step
-const videoStep = $("videoStep");
-const playVideoBtn = $("playVideoBtn");
-const videoWrap = $("videoWrap");
-const compVideo = $("compVideo");
-
-// Checkboxes
-const c1 = $("c1"), c2 = $("c2"), c3 = $("c3");
-
-// Confetti
-const confettiCanvas = $("confetti");
-const ctx = confettiCanvas.getContext("2d");
-let W, H, pieces = [], confettiRunning = false;
-
-// State
-let attempts = ATTEMPTS_MAX;
-let timeLeft = TIMER_SECONDS;
-let tickHandle = null;
-let lockedOut = false;
-
-let girlfriendAnswer = ""; // YES / NO
-
-// ------------------------
-// Utils
-// ------------------------
-function normalize(str){
-  return (str || "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-function digitsOnly(str){
-  return (str || "").replace(/\D/g, "");
-}
-function setStatus(type, msg){
-  statusEl.className = "status " + (type || "");
-  statusEl.textContent = msg || "";
-}
-function formatTime(s){
-  const mm = String(Math.floor(s / 60)).padStart(2,"0");
-  const ss = String(s % 60).padStart(2,"0");
-  return `${mm}:${ss}`;
-}
-function shake(el){
-  el.animate(
-    [{transform:"translateX(0)"},{transform:"translateX(-6px)"},{transform:"translateX(6px)"},{transform:"translateX(0)"}],
-    {duration: 260, easing:"ease-out"}
-  );
-}
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-// ------------------------
-// Background music
-// Browsers require a user gesture. We'll start it on Unlock success (submit click).
-// ------------------------
-async function startBgMusic(){
-  if(!bgAudio) return;
-  try{
-    if(bgAudio.paused){
-      bgAudio.volume = 0.75;
-      await bgAudio.play();
-    }
-  }catch{
-    // If blocked, that's fine. It may work once user interacts again.
-  }
+:root{
+  --bg1:#070710;
+  --bg2:#0b0b12;
+  --card: rgba(255,255,255,.06);
+  --stroke: rgba(255,255,255,.10);
+  --txt: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.70);
+  --muter: rgba(255,255,255,.55);
+  --pink: #ff4da6;
+  --pink2:#ff7bc8;
+  --good:#38f09a;
+  --bad:#ff5d5d;
 }
 
-// Stops background music (used after teddy animation before video)
-async function stopBgMusic(){
-  if(!bgAudio) return;
-  try{
-    // quick fade out
-    const steps = 12;
-    const startV = bgAudio.volume ?? 1;
-    for(let i=steps; i>=0; i--){
-      bgAudio.volume = startV * (i/steps);
-      await sleep(60);
-    }
-    bgAudio.pause();
-    bgAudio.currentTime = 0;
-  }catch{}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color:var(--txt);
+  background:
+    radial-gradient(1200px 700px at 20% 10%, rgba(255,77,166,.18), transparent 60%),
+    radial-gradient(900px 600px at 80% 30%, rgba(255,123,200,.12), transparent 55%),
+    linear-gradient(180deg, var(--bg1), var(--bg2));
+  overflow-x:hidden;
 }
 
-// ------------------------
-// Lockout
-// ------------------------
-function getLockoutUntil(){
-  const v = localStorage.getItem(STORAGE_KEY);
-  if(!v) return 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-function setLockoutMinutes(mins){
-  const until = Date.now() + mins * 60 * 1000;
-  localStorage.setItem(STORAGE_KEY, String(until));
-  return until;
-}
-function clearLockout(){
-  localStorage.removeItem(STORAGE_KEY);
-}
-function disableForm(disabled){
-  ["q1","q2","q3"].forEach(id => $(id).disabled = disabled);
-  [c1,c2,c3].forEach(x => x.disabled = disabled);
-  quizForm.querySelector('button[type="submit"]').disabled = disabled;
-}
-function applyLockState(){
-  const until = getLockoutUntil();
-  if(until > Date.now()){
-    lockedOut = true;
-    const minsLeft = Math.max(1, Math.ceil((until - Date.now()) / 60000));
-    lockNote.textContent = `Locked for ${minsLeft} minute(s). Come back soon 💗`;
-    disableForm(true);
-  } else {
-    lockedOut = false;
-    lockNote.textContent = "";
-    disableForm(false);
-    clearLockout();
-  }
+.bg{
+  position:fixed; inset:0;
+  background:
+    radial-gradient(800px 500px at 50% 85%, rgba(56,240,154,.06), transparent 60%),
+    radial-gradient(700px 450px at 10% 60%, rgba(255,255,255,.04), transparent 60%);
+  pointer-events:none;
 }
 
-// ------------------------
-// Timer
-// ------------------------
-function startTimer(){
-  timerEl.textContent = formatTime(timeLeft);
-  tickHandle = setInterval(() => {
-    if(lockedOut) return;
+.shell{width:min(980px, 92vw); margin: 34px auto 50px; position:relative;}
 
-    timeLeft -= 1;
-    timerEl.textContent = formatTime(Math.max(0, timeLeft));
-
-    if(timeLeft <= 0){
-      clearInterval(tickHandle);
-      setStatus("bad", "Time’s up 😭 Reset and try again.");
-      disableForm(true);
-      lockNote.textContent = "Press Reset to restart the timer.";
-    }
-  }, 1000);
+.top{margin-bottom: 18px;}
+.badge{
+  display:inline-flex; gap:10px; align-items:center;
+  padding:10px 14px; border:1px solid var(--stroke);
+  border-radius:999px; background: rgba(255,255,255,.04);
+  backdrop-filter: blur(10px); font-weight:650; letter-spacing:.2px;
 }
-function resetTimer(){
-  clearInterval(tickHandle);
-  timeLeft = TIMER_SECONDS;
-  disableForm(false);
-  lockNote.textContent = "";
-  timerEl.textContent = formatTime(timeLeft);
-  startTimer();
+.sub{margin-top:10px; color:var(--muted)}
+
+.card{
+  border:1px solid var(--stroke);
+  border-radius: 18px;
+  background: var(--card);
+  backdrop-filter: blur(14px);
+  padding: 22px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.35);
+  position:relative;
+  overflow:hidden;
 }
 
-// ------------------------
-// Confetti
-// ------------------------
-function resizeCanvas(){
-  W = confettiCanvas.width = window.innerWidth;
-  H = confettiCanvas.height = window.innerHeight;
-}
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
-
-function makeConfetti(n=150){
-  pieces = Array.from({length:n}, () => ({
-    x: Math.random() * W,
-    y: -20 - Math.random() * H,
-    r: 4 + Math.random() * 6,
-    vy: 2 + Math.random() * 4,
-    vx: -1.2 + Math.random() * 2.4,
-    rot: Math.random() * Math.PI,
-    vr: -0.08 + Math.random() * 0.16
-  }));
-}
-function drawConfetti(){
-  if(!confettiRunning) return;
-  ctx.clearRect(0,0,W,H);
-  for(const p of pieces){
-    p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-    if(p.y > H + 30) p.y = -20;
-    if(p.x < -30) p.x = W + 30;
-    if(p.x > W + 30) p.x = -30;
-
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.rot);
-    ctx.globalAlpha = 0.95;
-    const hue = (p.x / W) * 360;
-    ctx.fillStyle = `hsl(${hue}, 90%, 65%)`;
-    ctx.fillRect(-p.r/2, -p.r/2, p.r*1.2, p.r*0.8);
-    ctx.restore();
-  }
-  requestAnimationFrame(drawConfetti);
-}
-function startConfetti(){
-  confettiRunning = true;
-  makeConfetti();
-  drawConfetti();
-  setTimeout(() => { confettiRunning = false; ctx.clearRect(0,0,W,H); }, 6500);
+.hud{display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 10px;}
+.pill{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-weight: 700;
+  color: var(--muted);
 }
 
-// ------------------------
-// Terminal animation
-// ------------------------
-async function terminalSequence(){
-  terminal.classList.remove("hidden");
-  terminalBody.textContent = "";
+h1{margin: 0 0 10px; font-size: 32px}
+h2{margin: 0 0 10px; font-size: 30px}
+h3{margin: 0 0 8px}
+h4{margin: 0 0 10px}
 
-  const lines = [
-    ">> connecting to SECURE_VAULT…",
-    ">> verifying key fragments…",
-    ">> checksum: OK",
-    ">> decrypting payload: LETTER_AND_PLAN.enc",
-    ">> bypassing firewall: butterflies.exe",
-    ">> elevating permissions: her_access=true",
-    ">> restoring memories…",
-    ">> AUTH SUCCESS ✅",
-    ">> opening vault…"
-  ];
+p{line-height:1.55}
+.hint{color:var(--muted); margin-top:0}
+.muter{color:var(--muter)}
+.micro{margin-top: 10px; color:var(--muter); font-size: 13px}
 
-  for(const l of lines){
-    terminalBody.textContent += l + "\n";
-    terminalBody.scrollTop = terminalBody.scrollHeight;
-    await sleep(230 + Math.random()*170);
-  }
+.q{margin: 14px 0}
+label{display:block; margin:0 0 7px; color:var(--muted); font-weight:650}
+input{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.12);
+  outline:none;
+  background: rgba(0,0,0,.25);
+  color:var(--txt);
+  font-size: 15px;
+}
+input:focus{border-color: rgba(255,77,166,.45); box-shadow: 0 0 0 4px rgba(255,77,166,.12)}
 
-  await sleep(600);
-  terminal.classList.add("hidden");
+.checks{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:8px;
+  padding: 10px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.14);
+}
+.checkRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:700;
+  color: var(--txt);
+}
+.checkRow input{width:auto; transform: scale(1.1);}
+
+.actions{display:flex; gap:10px; margin-top: 16px; flex-wrap: wrap;}
+.btn{
+  border:1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  padding: 11px 14px;
+  background: rgba(0,0,0,.18);
+  color: var(--txt);
+  font-weight: 750;
+  cursor:pointer;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+.btn:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.22)}
+.btn:active{transform: translateY(0px) scale(.99)}
+.primary{
+  background: linear-gradient(135deg, rgba(255,77,166,.92), rgba(255,123,200,.92));
+  border-color: rgba(255,255,255,.20);
+  color: #14060f;
+}
+.ghost{background: rgba(0,0,0,.12)}
+
+.status{margin-top: 12px; font-weight:800}
+.status.ok{color: var(--good)}
+.status.bad{color: var(--bad)}
+
+.hidden{display:none !important}
+.reveal{animation: pop .28s ease both;}
+@keyframes pop{from{transform: translateY(8px); opacity:0}to{transform: translateY(0); opacity:1}}
+
+.love{font-size: 17px; color: var(--txt)}
+
+.proposal{
+  margin-top: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  padding: 18px;
+  background: rgba(0,0,0,.16);
+  position:relative;
+}
+.heart{
+  font-size: 34px;
+  position:absolute; right: 14px; top: 12px;
+  filter: drop-shadow(0 10px 22px rgba(255,77,166,.25));
+}
+.note{color:var(--muted); margin-top: 6px}
+.choices{display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px}
+
+.sparkle{
+  position:absolute; inset:-2px;
+  background:
+    radial-gradient(700px 260px at 20% 10%, rgba(255,77,166,.22), transparent 55%),
+    radial-gradient(520px 220px at 80% 30%, rgba(255,123,200,.16), transparent 55%);
+  pointer-events:none;
+  opacity:.8;
 }
 
-// Optional unlock sound + fade (if file exists)
-async function playUnlockSound(){
-  if(!unlockAudio) return;
-  try{
-    unlockAudio.volume = 0.9;
-    await unlockAudio.play();
-  }catch{}
+.letterText{font-size: 16px;}
+.sig{font-weight: 900; color: rgba(255,255,255,.85);}
+.bigAsk{
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing:.2px;
+}
+.accent{
+  background: linear-gradient(135deg, rgba(255,77,166,.95), rgba(255,123,200,.95));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
-// ------------------------
-// Collage reveal (2 tiles)
-// ------------------------
-async function revealCollage(){
-  const tiles = [tile1, tile2];
-  for(const t of tiles){
-    t.classList.remove("hidden");
-    await sleep(420);
-  }
+/* 2-photo rectangles */
+.collageWrap{margin-top: 16px;}
+.collageTitle{color: var(--muted); font-weight: 850;}
+.collage.two{
+  margin-top: 10px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.tile{
+  border-radius: 14px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.20);
+  transform: translateY(10px);
+  opacity: 0;
+  animation: tileIn .5s ease forwards;
+}
+.tile.small{width: 240px; height: 130px;}
+.tile img{width:100%; height:100%; object-fit: cover; display:block;}
+@keyframes tileIn{to{transform: translateY(0); opacity:1}}
+
+/* final blocks */
+.final{
+  margin-top: 16px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(0,0,0,.14);
+}
+.dateRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top: 10px;
+}
+.dateRow input{flex:1; min-width: 180px}
+
+.copyBox{
+  margin-top: 12px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(0,0,0,.14);
+}
+.copyTitle{margin:0 0 8px; color:var(--muted); font-weight:850}
+textarea{
+  width:100%;
+  min-height: 110px;
+  border-radius: 12px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.20);
+  color: var(--txt);
+  padding: 10px;
+  resize: vertical;
+}
+.happy{
+  margin-top: 10px;
+  font-weight: 950;
+  color: rgba(56,240,154,.95);
+}
+.footerLove{margin-top: 16px; color: var(--muted); font-weight:850}
+.fine{margin-top: 14px; color: var(--muter); font-size: 12px}
+
+/* Teddy */
+.teddyScene{
+  margin-top: 14px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  background: rgba(0,0,0,.12);
+  padding: 16px;
+  position: relative;
+  overflow:hidden;
+  min-height: 170px;
+}
+.mailbox{
+  position:absolute;
+  right: 18px;
+  bottom: 18px;
+  font-size: 44px;
+  opacity: .9;
+}
+.letter{
+  position:absolute;
+  left: 58%;
+  bottom: 62px;
+  font-size: 34px;
+  opacity: 0;
+  transform: translateX(-40px) translateY(10px) rotate(-8deg);
+}
+.teddy{
+  position:absolute;
+  left: 18px;
+  bottom: 10px;
+  width: 120px;
+  height: 150px;
+  filter: drop-shadow(0 18px 30px rgba(0,0,0,.35));
+}
+.teddy .head{
+  position:absolute; left: 22px; top: 10px;
+  width: 76px; height: 70px;
+  border-radius: 40px;
+  background: rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.10);
+}
+.teddy .ear{
+  position:absolute; top: 0px;
+  width: 30px; height: 28px; border-radius: 18px;
+  background: rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.10);
+}
+.teddy .ear.left{left: 12px;}
+.teddy .ear.right{right: 12px;}
+.teddy .face{
+  position:absolute; left: 22px; top: 22px;
+  width: 76px; height: 60px;
+}
+.eye{position:absolute; top: 16px; width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.85);}
+.eye.left{left: 20px;}
+.eye.right{right: 20px;}
+.nose{
+  position:absolute; left:50%; top: 26px;
+  width: 10px; height: 8px;
+  transform: translateX(-50%);
+  border-radius: 6px;
+  background: rgba(255,77,166,.85);
+}
+.mouth{
+  position:absolute; left:50%; top: 36px;
+  width: 18px; height: 10px;
+  transform: translateX(-50%);
+  border-bottom: 2px solid rgba(255,255,255,.60);
+  border-radius: 0 0 14px 14px;
+  opacity: .9;
+}
+.teddy .body{
+  position:absolute; left: 26px; top: 74px;
+  width: 68px; height: 66px;
+  border-radius: 34px;
+  background: rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.10);
+}
+.teddy .arm{
+  position:absolute; top: 86px;
+  width: 34px; height: 20px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.10);
+}
+.teddy .arm.left{left: 0px; transform-origin: right center;}
+.teddy .arm.right{right: 0px; transform-origin: left center;}
+.thumb{
+  position:absolute;
+  left: 84px;
+  top: 74px;
+  font-size: 26px;
+  transform: scale(.8);
+  opacity: .95;
+}
+.play .letter{
+  animation: letterIn .55s ease forwards, fold .55s ease .55s forwards, post .8s ease 1.15s forwards;
+}
+.play #mailbox{animation: mailboxBop .35s ease 1.85s forwards;}
+.play .arm.left{animation: armWave .6s ease .9s forwards;}
+.play .arm.right{animation: armWave2 .6s ease .9s forwards;}
+.play #thumb{
+  display:block !important;
+  animation: thumbPop .35s ease 2.1s forwards;
+}
+@keyframes letterIn{to{opacity:1; transform: translateX(0) translateY(0) rotate(0deg);}}
+@keyframes fold{to{transform: translateX(0) translateY(0) rotate(0deg) scale(.75);}}
+@keyframes post{to{transform: translateX(220px) translateY(30px) rotate(8deg) scale(.7); opacity: 1;}}
+@keyframes mailboxBop{0%{transform: translateY(0)}50%{transform: translateY(-6px)}100%{transform: translateY(0)}}
+@keyframes armWave{0%{transform: rotate(0)}50%{transform: rotate(-25deg)}100%{transform: rotate(0)}}
+@keyframes armWave2{0%{transform: rotate(0)}50%{transform: rotate(25deg)}100%{transform: rotate(0)}}
+@keyframes thumbPop{from{transform: scale(.6); opacity:0}to{transform: scale(1); opacity:1}}
+
+/* Video */
+.videoWrap{margin-top: 12px;}
+video{
+  width: 100%;
+  max-width: 860px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.25);
 }
 
-// ------------------------
-// Validation
-// ------------------------
-function validate(){
-  const q1 = normalize($("q1").value);
-  const q2 = normalize($("q2").value);
-  const q3 = digitsOnly($("q3").value);
-
-  const q4ok = c1.checked && c2.checked && c3.checked;
-
-  if(!q1 || !q2 || !q3) return { ok:false, msg:"Answer all fields 🙂" };
-  if(!q4ok) return { ok:false, msg:"Q4 needs ALL 3 ticked 😌" };
-
-  if(q1 !== EXPECTED.q1) return { ok:false, msg:"Q1 is wrong 😅" };
-  if(q2 !== EXPECTED.q2) return { ok:false, msg:"Q2 is wrong 😅" };
-  if(q3 !== EXPECTED.q3_digits) return { ok:false, msg:"Q3 is wrong 😅 (use 10/10/25 style)" };
-
-  return { ok:true };
+.terminal{
+  position:fixed;
+  inset: 18px;
+  max-width: 980px;
+  margin: auto;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  box-shadow: 0 26px 80px rgba(0,0,0,.55);
+  overflow:hidden;
+}
+.terminalHeader{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+}
+.dot{width:10px; height:10px; border-radius:50%;}
+.red{background:#ff5d5d}
+.yellow{background:#ffd666}
+.green{background:#3cff8b}
+.terminalTitle{margin-left:8px; color: rgba(255,255,255,.75); font-weight:800; letter-spacing:.2px}
+.terminalBody{
+  margin:0;
+  padding: 14px 14px 18px;
+  color: rgba(180,255,220,.9);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  height: calc(100% - 44px);
+  overflow:auto;
 }
 
-function decrementAttempts(){
-  attempts -= 1;
-  attemptsEl.textContent = String(attempts);
-  if(attempts <= 0){
-    setStatus("bad", `Too many attempts. Locked for ${LOCKOUT_MINUTES} minutes.`);
-    setLockoutMinutes(LOCKOUT_MINUTES);
-    applyLockState();
-  }
-}
+#confetti{position:fixed; inset:0; pointer-events:none;}
 
-// ------------------------
-// Unlock flow
-// ------------------------
-async function unlock(){
-  setStatus("ok", "Key accepted. Decrypting…");
-  clearInterval(tickHandle);
-
-  // Start background music (loop) on user gesture (this click)
-  await startBgMusic();
-
-  await Promise.all([
-    terminalSequence(),
-    playUnlockSound()
-  ]);
-
-  lockedView.classList.add("hidden");
-  unlockedView.classList.remove("hidden");
-
-  startConfetti();
-  await revealCollage();
-  // NOTE: collage is hidden until Next -> ask step, we still prep tiles; revealCollage runs after unlock
-  // It won't show until collageWrap is unhidden.
-}
-
-// ------------------------
-// Steps: letter -> next -> ask -> calendar
-// ------------------------
-function goToAskStep(){
-  letterStep.classList.add("hidden");
-  askStep.classList.remove("hidden");
-  collageWrap.classList.remove("hidden");
-  askStep.scrollIntoView({behavior:"smooth", block:"start"});
-}
-
-function showCalendar(note){
-  answerNote.textContent = note;
-  final.classList.remove("hidden");
-  final.scrollIntoView({behavior:"smooth", block:"start"});
-}
-
-// ------------------------
-// Message generation + teddy animation + then stop music + show video
-// ------------------------
-function generateMessage(){
-  const d = datePick.value;
-  const t = timePick.value;
-
-  if(!d){
-    alert("Pick a date first 🙂");
-    return;
-  }
-
-  const readableDate = (() => {
-    try{
-      const dt = new Date(d + "T00:00:00");
-      return dt.toLocaleDateString(undefined, { weekday:"long", year:"numeric", month:"long", day:"numeric" });
-    }catch{
-      return d;
-    }
-  })();
-
-  const timePart = t ? ` at ${t}` : "";
-
-  const msg =
-`Hey ${HIM_NAME} 💗
-
-I unlocked your vault 😌
-
-Answer: ${girlfriendAnswer}
-
-I’m free on ${readableDate}${timePart}.
-Let’s make it a real moment.
-
-— ${HER_NAME}`;
-
-  messageOut.value = msg;
-  copyBox.classList.remove("hidden");
-
-  // Teddy animation
-  teddyScene.classList.remove("hidden");
-  teddyScene.classList.remove("play");
-  void teddyScene.offsetWidth;
-  teddyScene.classList.add("play");
-
-  // Show "He will be so happy ✅"
-  happyMsg.classList.add("hidden");
-  setTimeout(async () => {
-    happyMsg.classList.remove("hidden");
-    copyBox.scrollIntoView({behavior:"smooth", block:"start"});
-
-    // After this moment: end background music and reveal video section
-    await stopBgMusic();
-    videoStep.classList.remove("hidden");
-    videoStep.scrollIntoView({behavior:"smooth", block:"start"});
-  }, 2400);
-}
-
-// ------------------------
-// Video playback behavior
-// Background is already stopped, but we still ensure it's paused/muted.
-// ------------------------
-async function playVideo(){
-  try{
-    if(bgAudio){
-      bgAudio.pause();
-      bgAudio.volume = 0;
-    }
-  }catch{}
-
-  videoWrap.classList.remove("hidden");
-  compVideo.currentTime = 0;
-
-  try{
-    await compVideo.play();
-  }catch{
-    // If autoplay fails, user can press play manually.
-  }
-}
-
-// ------------------------
-// Init
-// ------------------------
-function init(){
-  attemptsEl.textContent = String(attempts);
-  applyLockState();
-  startTimer();
-
-  // Ensure unlocked steps start correctly
-  askStep.classList.add("hidden");
-  collageWrap.classList.add("hidden");
-
-  quizForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if(lockedOut) return;
-
-    if(timeLeft <= 0){
-      setStatus("bad", "Reset to try again.");
-      return;
-    }
-
-    const res = validate();
-    if(res.ok){
-      await unlock();
-    }else{
-      setStatus("bad", res.msg);
-      shake(lockedView);
-      decrementAttempts();
-    }
-  });
-
-  resetBtn.addEventListener("click", () => {
-    quizForm.reset();
-    setStatus("", "");
-    attempts = ATTEMPTS_MAX;
-    attemptsEl.textContent = String(attempts);
-    clearLockout();
-    applyLockState();
-    resetTimer();
-  });
-
-  nextBtn.addEventListener("click", () => {
-    goToAskStep();
-  });
-
-  yesBtn.addEventListener("click", () => {
-    girlfriendAnswer = "YES";
-    showCalendar("She said YES 💘 Now choose a date/time.");
-  });
-
-  noBtn.addEventListener("click", () => {
-    girlfriendAnswer = "NO";
-    showCalendar("She said NO 🙈 Now choose a date/time to talk properly.");
-  });
-
-  genBtn.addEventListener("click", generateMessage);
-
-  copyBtn.addEventListener("click", async () => {
-    try{
-      await navigator.clipboard.writeText(messageOut.value);
-      copyBtn.textContent = "Copied ✅";
-      setTimeout(() => (copyBtn.textContent = "Copy"), 1200);
-    }catch{
-      alert("Copy failed. You can manually select and copy the text.");
-    }
-  });
-
-  playVideoBtn.addEventListener("click", playVideo);
-
-  // If video starts playing by other means, ensure bg stays off
-  compVideo.addEventListener("play", () => {
-    try{
-      if(bgAudio){
-        bgAudio.pause();
-        bgAudio.volume = 0;
-      }
-    }catch{}
-  });
-}
-
-init();
