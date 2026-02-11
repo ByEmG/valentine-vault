@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Valentine Vault</title>
 
-  <link rel="stylesheet" href="style.css?v=31" />
+  <link rel="stylesheet" href="style.css?v=40" />
   <meta name="theme-color" content="#070710" />
 </head>
 
 <body>
   <div class="bg"></div>
 
-  <!-- Background music (add bg.mp3 in repo root) -->
-  <audio id="bgAudio" src="bg.mp3" preload="auto" loop playsinline></audio>
+  <!-- Background music (place file at assets/bg.mp3) -->
+  <audio id="bgAudio" src="assets/bg.mp3" preload="auto" loop playsinline></audio>
 
-  <!-- Premium music control: ALWAYS works (user gesture) -->
+  <!-- Premium music control (required for iPhone) -->
   <button id="musicBtn" class="musicBtn" type="button" aria-label="Play or pause music">
     ▶ Play music
   </button>
@@ -31,7 +31,7 @@
 
   <main class="shell">
     <header class="top">
-      <div class="badge">Valentine Vault 🔐 </div>
+      <div class="badge">🔐 Valentine Vault</div>
       <div class="sub">Decrypt the key to unlock the message.</div>
     </header>
 
@@ -96,15 +96,12 @@
         <h3>A letter for you</h3>
 
         <p class="note letterText">
-          You are my best friend, my patner, my soulmate. You have given me so much love and happiness 
-          and I can never thank you enough for that.You are the most beautiful person I have ever known inside and out.
-          You make me want to be a better person every single day to grow with you, to support you, to cherish you, 
-          to miam you ;).
-          Today and Always.
-
+          You are my best friend, my patner, my soulmate. You have given me so much love and happiness
+          and I can never thank you enough for that. You are the most beautiful person I have ever known inside and out.
+          You make me want to be a better person every single day to grow with you, to support you, to cherish you,
+          to miam you ;).<br><br>
+          Today and Always.<br><br>
           I love you with all my heart ❤️.
-          <br><br> 
-          <span class="sig">— LAETITIA DANIELLE OUEMBE M.</span>
         </p>
 
         <div class="actions">
@@ -113,7 +110,7 @@
       </div>
     </section>
 
-    <!-- STEP 3: ASK (NO PHOTOS HERE ANYMORE) -->
+    <!-- STEP 3: ASK -->
     <section class="card reveal hidden" id="stepAsk">
       <div class="sparkle" aria-hidden="true"></div>
 
@@ -122,7 +119,7 @@
 
       <div class="proposal">
         <div class="heart">❤️</div>
-        <h3 class="bigAsk">Will you be <span class="accent">MY GIRLFRIEND</span> ?</h3>
+        <h3 class="bigAsk">Will you be <span class="accent">MY VALENTINE</span> ?</h3>
 
         <div class="choices">
           <button class="btn primary" id="yesBtn">YES 💘</button>
@@ -133,12 +130,12 @@
       </div>
     </section>
 
-    <!-- STEP 4: CALENDAR + TEDDY -->
+    <!-- STEP 4: CALENDAR + TEDDY + COPY -->
     <section class="card reveal hidden" id="stepPlan">
       <div class="sparkle" aria-hidden="true"></div>
 
       <h2>Pick our moment 📆</h2>
-      <p class="love">Choose the date/time that works for you. He’ll make it happen.</p>
+      <p class="love">Choose the date/time that works for you. Then generate the message and send it to him.</p>
 
       <div class="final">
         <div class="dateRow">
@@ -169,12 +166,18 @@
         </div>
 
         <div class="copyBox hidden" id="copyBox">
-          <p class="copyTitle">Send him this:</p>
+          <p class="copyTitle">Send him this (it includes date & time):</p>
           <textarea id="messageOut" readonly></textarea>
-          <button class="btn ghost" id="copyBtn">Copy</button>
+          <div class="actions">
+            <button class="btn ghost" id="copyBtn">Copy</button>
+          </div>
         </div>
 
         <p class="happy hidden" id="happyMsg">He will be so happy ✅</p>
+
+        <div class="actions">
+          <button class="btn primary" id="goVideoBtn">Next: Watch video ▶</button>
+        </div>
       </div>
     </section>
 
@@ -183,7 +186,7 @@
       <div class="sparkle" aria-hidden="true"></div>
 
       <h2>Your video compilation 🎬</h2>
-      <p class="love">Tap play — background music will mute automatically so you hear the video.</p>
+      <p class="love">Press play. Background music will pause so you hear the video.</p>
 
       <div class="final">
         <div class="actions">
@@ -191,7 +194,7 @@
         </div>
 
         <div class="videoWrap hidden" id="videoWrap">
-          <video id="compVideo" controls playsinline preload="auto" src="video.mp4"></video>
+          <video id="compVideo" controls playsinline preload="auto" src="assets/video.mp4"></video>
         </div>
       </div>
 
@@ -200,6 +203,11 @@
 
     <footer class="fine">Runs fully in your browser. No server.</footer>
   </main>
+
+  <canvas id="confetti"></canvas>
+  <script src="app.js?v=40"></script>
+</body>
+</html>
 
   <canvas id="confetti"></canvas>
   <script src="app.js?v=31"></script>
