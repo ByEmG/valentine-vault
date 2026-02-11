@@ -2,16 +2,16 @@
 // 1) EDIT THESE 5 "correct" answers
 // ==============================
 const ANSWERS = [
-  "my love",      // q1: nickname you call her
+  "mimine",      // q1: nickname you call her
   "leeds",        // q2: city you met/connected
-  "pizza",        // q3: comfort food
+  "Me",        // q3: comfort food
   "i miss you",   // q4: what you say when you miss her
-  "banana"        // q5: inside word/joke
+  "Banana"        // q5: inside word/joke
 ];
 
 // Optional: personalize the final message:
 const YOUR_NAME = "Pierre-Emmanuel";
-const HER_NAME = "My Love";
+const HER_NAME = "Wifey";
 
 // ==============================
 // Utilities
