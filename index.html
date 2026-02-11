@@ -4,17 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Valentine Vault</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- cache-buster so GitHub Pages never shows “unstyled” version -->
+  <link rel="stylesheet" href="style.css?v=25" />
   <meta name="theme-color" content="#070710" />
 </head>
 
 <body>
   <div class="bg"></div>
 
-  <!-- Background music (add bg.mp3 in repo root). Loop across the experience. -->
+  <!-- background music (add bg.mp3 in root) -->
   <audio id="bgAudio" preload="auto" src="bg.mp3" loop></audio>
 
-  <!-- Unlock sound (optional: add unlock.mp3 in repo root). -->
+  <!-- optional unlock sound (add unlock.mp3 in root) -->
   <audio id="unlockAudio" preload="auto" src="unlock.mp3"></audio>
 
   <!-- Fake hacking terminal overlay -->
@@ -32,8 +34,8 @@
       <div class="sub">Decrypt the key to unlock the message.</div>
     </header>
 
-    <!-- LOCKED VIEW -->
-    <section class="card" id="lockedView">
+    <!-- STEP 1: QUIZ -->
+    <section class="card" id="stepQuiz">
       <div class="hud">
         <div class="pill">⏳ Timer: <span id="timer">03:00</span></div>
         <div class="pill">🎯 Attempts: <span id="attempts">5</span></div>
@@ -42,28 +44,28 @@
       <h1>Decrypt the Key 💗</h1>
       <p class="hint">
         Answer the questions. No case sensitivity.
-        <br><span class="muter">Tip: for the date, write it like <b>10/10/25</b> (slashes or dashes are OK).</span>
+        <br><span class="muter">Tip: date like <b>10/10/25</b> (slashes or dashes OK).</span>
       </p>
 
       <form id="quizForm" autocomplete="off" novalidate>
         <div class="q">
           <label for="q1">Q1) What the name you call him with?</label>
-          <input id="q1" name="q1" type="text" placeholder="Type your answer…" required />
+          <input id="q1" type="text" placeholder="Type your answer…" required />
         </div>
 
         <div class="q">
           <label for="q2">Q2) What’s his fav color?</label>
-          <input id="q2" name="q2" type="text" placeholder="Type your answer…" required />
+          <input id="q2" type="text" placeholder="Type your answer…" required />
         </div>
 
         <div class="q">
           <label for="q3">Q3) When did he propose to you?</label>
-          <input id="q3" name="q3" type="text" placeholder="Example: 10/10/25" required />
+          <input id="q3" type="text" placeholder="Example: 10/10/25" required />
           <div class="micro">wow soon 6months</div>
         </div>
 
         <div class="q">
-          <label>Q4) Choose ALL that are true (you must tick all 3):</label>
+          <label>Q4) Choose ALL that are true (tick all 3):</label>
           <div class="checks">
             <label class="checkRow"><input type="checkbox" id="c1"> HE LOVES YOU</label>
             <label class="checkRow"><input type="checkbox" id="c2"> HE LOVES YOU</label>
@@ -81,18 +83,14 @@
       </form>
     </section>
 
-    <!-- UNLOCKED VIEW -->
-    <section class="card reveal hidden" id="unlockedView" aria-live="polite">
+    <!-- STEP 2: LETTER -->
+    <section class="card reveal hidden" id="stepLetter">
       <div class="sparkle" aria-hidden="true"></div>
 
       <h2>Vault Unlocked ✨</h2>
-      <p class="love">
-        Baby… you did it.  
-        You unlocked the one message I only wanted <b>you</b> to see.
-      </p>
+      <p class="love">Baby… you did it. You unlocked the one message I only wanted <b>you</b> to see.</p>
 
-      <!-- STEP 1: LETTER (ALONE) -->
-      <div class="proposal" id="letterStep">
+      <div class="proposal">
         <div class="heart">❤️</div>
         <h3>A letter for you</h3>
 
@@ -106,14 +104,20 @@
         </p>
 
         <div class="actions">
-          <button class="btn primary" id="nextBtn">Next ➜</button>
+          <button class="btn primary" id="nextToAsk">Next ➜</button>
         </div>
       </div>
+    </section>
 
-      <!-- STEP 2: GIRLFRIEND ASK -->
-      <div class="proposal hidden" id="askStep">
+    <!-- STEP 3: ASK -->
+    <section class="card reveal hidden" id="stepAsk">
+      <div class="sparkle" aria-hidden="true"></div>
+
+      <h2>One more step…</h2>
+      <p class="love">Before we plan the moment, answer honestly 😌</p>
+
+      <div class="proposal">
         <div class="heart">❤️</div>
-
         <h3 class="bigAsk">Will you be <span class="accent">MY GIRLFRIEND</span> ?</h3>
 
         <div class="choices">
@@ -124,20 +128,23 @@
         <p class="micro" id="answerNote"></p>
       </div>
 
-      <!-- 2-photo collage -->
-      <div class="collageWrap hidden" id="collageWrap">
+      <div class="collageWrap">
         <h4 class="collageTitle">Memory files restoring…</h4>
-        <div class="collage two" id="collage">
+        <div class="collage two">
           <div class="tile small hidden" id="tile1"><img src="photos/1.jpg" alt="photo 1"></div>
           <div class="tile small hidden" id="tile2"><img src="photos/2.jpg" alt="photo 2"></div>
         </div>
       </div>
+    </section>
 
-      <!-- Calendar + Teddy animation -->
-      <div class="final hidden" id="final">
-        <h3>Pick our moment 📆</h3>
-        <p class="note">Choose the date/time that works for you. He’ll make it happen.</p>
+    <!-- STEP 4: CALENDAR + TEDDY -->
+    <section class="card reveal hidden" id="stepPlan">
+      <div class="sparkle" aria-hidden="true"></div>
 
+      <h2>Pick our moment 📆</h2>
+      <p class="love">Choose the date/time that works for you. He’ll make it happen.</p>
+
+      <div class="final">
         <div class="dateRow">
           <input id="datePick" type="date" />
           <input id="timePick" type="time" />
@@ -145,7 +152,7 @@
         </div>
 
         <div class="teddyScene hidden" id="teddyScene" aria-hidden="true">
-          <div class="teddy" id="teddy">
+          <div class="teddy">
             <div class="ear left"></div>
             <div class="ear right"></div>
             <div class="head"></div>
@@ -173,12 +180,16 @@
 
         <p class="happy hidden" id="happyMsg">He will be so happy ✅</p>
       </div>
+    </section>
 
-      <!-- VIDEO COMPILATION (appears after teddy + music ends) -->
-      <div class="final hidden" id="videoStep">
-        <h3>Your video compilation 🎬</h3>
-        <p class="note">Tap play — background music will mute automatically so you hear the video.</p>
+    <!-- STEP 5: VIDEO -->
+    <section class="card reveal hidden" id="stepVideo">
+      <div class="sparkle" aria-hidden="true"></div>
 
+      <h2>Your video compilation 🎬</h2>
+      <p class="love">Tap play — background music will mute automatically so you hear the video.</p>
+
+      <div class="final">
         <div class="actions">
           <button class="btn primary" id="playVideoBtn">Play video ▶</button>
         </div>
@@ -195,6 +206,6 @@
   </main>
 
   <canvas id="confetti"></canvas>
-  <script src="app.js"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>
