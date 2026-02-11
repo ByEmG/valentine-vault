@@ -367,6 +367,14 @@ async function playVideo(){
 
 // Init
 function init(){
+    // Start background music on the VERY first click anywhere (autoplay-safe)
+  document.addEventListener("click", () => startBgMusic(), { once: true });
+
+  attemptsEl.textContent = String(attempts);
+  applyLockState();
+  startTimer();
+  ...
+  
   attemptsEl.textContent = String(attempts);
   applyLockState();
   startTimer();
