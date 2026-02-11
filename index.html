@@ -5,19 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Valentine Vault</title>
 
-  <!-- cache-buster so GitHub Pages never shows “unstyled” version -->
-  <link rel="stylesheet" href="style.css?v=25" />
+  <!-- Cache buster to avoid GitHub Pages showing stale CSS -->
+  <link rel="stylesheet" href="style.css?v=30" />
   <meta name="theme-color" content="#070710" />
 </head>
 
 <body>
   <div class="bg"></div>
 
-  <!-- background music (add bg.mp3 in root) -->
-  <audio id="bgAudio" preload="auto" src="bg.mp3" loop></audio>
+  <!-- Background music (add bg.mp3 in repo root) -->
+  <audio id="bgAudio" src="bg.mp3" preload="auto" loop playsinline></audio>
 
-  <!-- optional unlock sound (add unlock.mp3 in root) -->
-  <audio id="unlockAudio" preload="auto" src="unlock.mp3"></audio>
+  <!-- Tiny fallback pill (only appears if autoplay is blocked) -->
+  <button id="musicGate" class="musicGate hidden" type="button" aria-label="Enable music">
+    🎵 Tap to enable music
+  </button>
 
   <!-- Fake hacking terminal overlay -->
   <div class="terminal hidden" id="terminal">
@@ -206,6 +208,6 @@
   </main>
 
   <canvas id="confetti"></canvas>
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>
