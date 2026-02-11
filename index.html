@@ -1,1 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Valentine Vault</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#0b0b12" />
+</head>
+
+<body>
+  <div class="bg"></div>
+  <main class="shell">
+    <header class="top">
+      <div class="badge">🔐 Valentine Vault</div>
+      <div class="sub">A private message. Only you can unlock it.</div>
+    </header>
+
+    <section class="card" id="lockedView">
+      <h1>Decrypt the Key 💗</h1>
+      <p class="hint">
+        Answer <b>5 questions about me</b>. Each answer is a “key fragment”.
+        When all fragments match, the vault opens.
+      </p>
+
+      <form id="quizForm" autocomplete="off" novalidate>
+        <div class="q">
+          <label for="q1">1) What nickname do I call you the most?</label>
+          <input id="q1" name="q1" type="text" placeholder="Type your answer…" required />
+        </div>
+
+        <div class="q">
+          <label for="q2">2) What city did we first meet in (or first really connected)?</label>
+          <input id="q2" name="q2" type="text" placeholder="Type your answer…" required />
+        </div>
+
+        <div class="q">
+          <label for="q3">3) What’s my favorite comfort food?</label>
+          <input id="q3" name="q3" type="text" placeholder="Type your answer…" required />
+        </div>
+
+        <div class="q">
+          <label for="q4">4) What’s the one thing I always say when I miss you?</label>
+          <input id="q4" name="q4" type="text" placeholder="Type your answer…" required />
+        </div>
+
+        <div class="q">
+          <label for="q5">5) What’s our “inside word” or private joke?</label>
+          <input id="q5" name="q5" type="text" placeholder="Type your answer…" required />
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Unlock 💞</button>
+          <button class="btn ghost" type="button" id="resetBtn">Reset</button>
+        </div>
+
+        <div class="status" id="status"></div>
+        <div class="micro">
+          Tip: answers aren’t case-sensitive. Extra spaces won’t matter.
+        </div>
+      </form>
+    </section>
+
+    <section class="card reveal hidden" id="unlockedView" aria-live="polite">
+      <div class="sparkle" aria-hidden="true"></div>
+      <h2>Vault Unlocked ✨</h2>
+
+      <p class="love">
+        Hey my love…<br />
+        You just proved something I already knew:
+        <b>you know me, you see me, and you’re my favorite person.</b>
+      </p>
+
+      <div class="proposal">
+        <div class="heart">❤️</div>
+        <h3>Will you be my Valentine?</h3>
+        <p class="note">
+          I want a real moment with you — not rushed, not random.
+          Pick a time that feels perfect for you, and I’ll handle the rest.
+        </p>
+
+        <div class="choices">
+          <button class="btn primary" id="yesBtn">YES 😭💘</button>
+          <button class="btn ghost" id="maybeBtn">Let’s plan a moment 📅</button>
+        </div>
+
+        <div class="planner hidden" id="planner">
+          <p class="plannerTitle"><b>Your availability:</b> choose what works best.</p>
+
+          <div class="slots">
+            <button class="slot" data-slot="This week (evening)">This week (evening)</button>
+            <button class="slot" data-slot="Weekend (day time)">Weekend (day time)</button>
+            <button class="slot" data-slot="Weekend (night)">Weekend (night)</button>
+            <button class="slot" data-slot="Next week (evening)">Next week (evening)</button>
+          </div>
+
+          <div class="custom">
+            <input id="customSlot" type="text" placeholder="Or type your own time/day…" />
+            <button class="btn primary" id="sendBtn">Generate message to send</button>
+          </div>
+
+          <div class="copyBox hidden" id="copyBox">
+            <p class="copyTitle">Send me this:</p>
+            <textarea id="messageOut" readonly></textarea>
+            <button class="btn ghost" id="copyBtn">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="footerLove">— from me to you, always.</p>
+    </section>
+
+    <footer class="fine">
+      Built with love. Runs fully in your browser.
+    </footer>
+  </main>
+
+  <canvas id="confetti"></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
 
