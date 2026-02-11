@@ -15,7 +15,7 @@
 const EXPECTED = {
   q1: "mimineee",
   q2: "brown",
-  q3_digits: "101026" // 10/10/26
+  q3_digits: "101025" // 10/10/26
 };
 
 const ATTEMPTS_MAX = 5;
