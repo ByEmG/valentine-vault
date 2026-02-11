@@ -1,7 +1,3 @@
-// Step-by-step (one screen at a time), keeps same aesthetics.
-// New features added ONLY: date=10/10/25, "wow soon 6months", 2 photos,
-// bg music loop, stop bg music after teddy, then video reveal.
-
 const EXPECTED = { q1:"mimineee", q2:"brown", q3:"101025" };
 const ATTEMPTS_MAX = 5;
 const TIMER_SECONDS = 180;
@@ -33,9 +29,9 @@ const c1 = $("c1"), c2 = $("c2"), c3 = $("c3");
 const terminal = $("terminal");
 const terminalBody = $("terminalBody");
 
-// Audio
+// Music
 const bgAudio = $("bgAudio");
-const unlockAudio = $("unlockAudio");
+const musicGate = $("musicGate");
 
 // Letter -> Ask
 const nextToAsk = $("nextToAsk");
@@ -92,6 +88,82 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function shake(el){
   el.animate([{transform:"translateX(0)"},{transform:"translateX(-6px)"},{transform:"translateX(6px)"},{transform:"translateX(0)"}],
              {duration:260,easing:"ease-out"});
+}
+
+// ------------------------
+// MUSIC MANAGER (best possible “start on launch”)
+// - tries instantly
+// - if blocked, starts on first user gesture (tap/click/scroll/keydown)
+// - shows a tiny pill only if needed
+// ------------------------
+let musicStarted = false;
+
+async function startBgMusic(force=false){
+  if(!bgAudio) return false;
+  if(musicStarted) return true;
+
+  try{
+    bgAudio.loop = true;
+    bgAudio.volume = 0.75;
+    bgAudio.muted = false;
+
+    const p = bgAudio.play();
+    if(p) await p;
+
+    musicStarted = true;
+    if(musicGate) musicGate.classList.add("hidden");
+    return true;
+  }catch{
+    // autoplay blocked
+    if(musicGate) musicGate.classList.remove("hidden");
+
+    // iOS trick: sometimes muted play succeeds, then we unmute on gesture
+    if(!force){
+      try{
+        bgAudio.muted = true;
+        const p2 = bgAudio.play();
+        if(p2) await p2;
+        // still mark started but keep muted; next gesture will unmute
+        musicStarted = true;
+        if(musicGate) musicGate.classList.remove("hidden");
+        return true;
+      }catch{}
+    }
+
+    return false;
+  }
+}
+
+function forceUnmute(){
+  if(!bgAudio) return;
+  try{
+    bgAudio.muted = false;
+    bgAudio.volume = 0.75;
+    if(bgAudio.paused) bgAudio.play();
+    if(musicGate) musicGate.classList.add("hidden");
+  }catch{}
+}
+
+function bindMusicFallbackTriggers(){
+  const onUser = async () => {
+    await startBgMusic(true);
+    forceUnmute();
+  };
+
+  window.addEventListener("touchstart", onUser, { once:true, passive:true });
+  window.addEventListener("click", onUser, { once:true, passive:true });
+  window.addEventListener("keydown", onUser, { once:true });
+  window.addEventListener("scroll", onUser, { once:true, passive:true });
+
+  if(musicGate){
+    musicGate.addEventListener("click", onUser);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if(!document.hidden){
+      startBgMusic();
+    }
+  });
 }
 
 // Lockout
@@ -197,34 +269,6 @@ function startConfetti(){
   setTimeout(()=>{ confettiRunning=false; ctx.clearRect(0,0,W,H); }, 6500);
 }
 
-// Audio
-async function startBgMusic(){
-  if(!bgAudio) return;
-  try{
-    if(bgAudio.paused){
-      bgAudio.volume = 0.75;
-      await bgAudio.play();
-    }
-  }catch{}
-}
-async function stopBgMusic(){
-  if(!bgAudio) return;
-  try{
-    const steps = 12;
-    const startV = bgAudio.volume ?? 1;
-    for(let i=steps;i>=0;i--){
-      bgAudio.volume = startV*(i/steps);
-      await sleep(60);
-    }
-    bgAudio.pause();
-    bgAudio.currentTime = 0;
-  }catch{}
-}
-async function playUnlockSound(){
-  if(!unlockAudio) return;
-  try{ unlockAudio.volume = 0.9; await unlockAudio.play(); }catch{}
-}
-
 // Terminal
 async function terminalSequence(){
   terminal.classList.remove("hidden");
@@ -275,7 +319,7 @@ function decrementAttempts(){
   }
 }
 
-// Step navigation (only one visible)
+// Step navigation
 function showStep(step){
   [stepQuiz, stepLetter, stepAsk, stepPlan, stepVideo].forEach(s => s.classList.add("hidden"));
   step.classList.remove("hidden");
@@ -294,8 +338,10 @@ async function unlock(){
   setStatus("ok","Key accepted. Decrypting…");
   clearInterval(tickHandle);
 
-  await startBgMusic(); // starts after user click
-  await Promise.all([terminalSequence(), playUnlockSound()]);
+  // try starting music right now (if not already started)
+  await startBgMusic();
+
+  await terminalSequence();
 
   startConfetti();
   showStep(stepLetter);
@@ -313,7 +359,7 @@ function goPlan(note){
   showStep(stepPlan);
 }
 
-// Teddy + then stop music + show video
+// Teddy then video (keeps your flow)
 function generateMessage(){
   const d = datePick.value;
   const t = timePick.value;
@@ -348,18 +394,22 @@ Let’s make it a real moment.
   teddyScene.classList.add("play");
 
   happyMsg.classList.add("hidden");
-  setTimeout(async () => {
+  setTimeout(() => {
     happyMsg.classList.remove("hidden");
-    await stopBgMusic();        // music ends here (your rule)
-    showStep(stepVideo);        // then show video section
+    showStep(stepVideo);
   }, 2400);
 }
 
-// Video
+// Video: make sure bg music is muted/paused when video starts
 async function playVideo(){
   try{
-    if(bgAudio){ bgAudio.pause(); bgAudio.volume = 0; }
+    if(bgAudio){
+      bgAudio.pause();
+      bgAudio.muted = true;
+      bgAudio.volume = 0;
+    }
   }catch{}
+
   videoWrap.classList.remove("hidden");
   compVideo.currentTime = 0;
   try{ await compVideo.play(); }catch{}
@@ -367,6 +417,11 @@ async function playVideo(){
 
 // Init
 function init(){
+
+  // Music: try immediately + bind fallbacks for iOS
+  bindMusicFallbackTriggers();
+  startBgMusic(); // attempts on load
+
   attemptsEl.textContent = String(attempts);
   applyLockState();
   startTimer();
@@ -388,8 +443,6 @@ function init(){
     }
   });
 
-  // keep your other listeners here (reset, next, yes/no, generate, copy, video...)
-
   resetBtn.addEventListener("click", () => {
     quizForm.reset();
     setStatus("", "");
@@ -400,19 +453,28 @@ function init(){
     resetTimer();
   });
 
-  nextToAsk.addEventListener("click", goAsk);
+  nextToAsk.addEventListener("click", () => {
+    // also forces unmute if iOS started muted
+    forceUnmute();
+    goAsk();
+  });
 
   yesBtn.addEventListener("click", () => {
     girlfriendAnswer = "YES";
+    forceUnmute();
     goPlan("She said YES 💘 Now choose a date/time.");
   });
 
   noBtn.addEventListener("click", () => {
     girlfriendAnswer = "NO";
+    forceUnmute();
     goPlan("She said NO 🙈 Now choose a date/time to talk properly.");
   });
 
-  genBtn.addEventListener("click", generateMessage);
+  genBtn.addEventListener("click", () => {
+    forceUnmute();
+    generateMessage();
+  });
 
   copyBtn.addEventListener("click", async () => {
     try{
@@ -427,7 +489,13 @@ function init(){
   playVideoBtn.addEventListener("click", playVideo);
 
   compVideo.addEventListener("play", () => {
-    try{ if(bgAudio){ bgAudio.pause(); bgAudio.volume = 0; } }catch{}
+    try{
+      if(bgAudio){
+        bgAudio.pause();
+        bgAudio.muted = true;
+        bgAudio.volume = 0;
+      }
+    }catch{}
   });
 }
 
