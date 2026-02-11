@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Valentine Vault</title>
 
-  <!-- Cache buster to avoid GitHub Pages showing stale CSS -->
-  <link rel="stylesheet" href="style.css?v=30" />
+  <link rel="stylesheet" href="style.css?v=31" />
   <meta name="theme-color" content="#070710" />
 </head>
 
@@ -16,9 +15,9 @@
   <!-- Background music (add bg.mp3 in repo root) -->
   <audio id="bgAudio" src="bg.mp3" preload="auto" loop playsinline></audio>
 
-  <!-- Tiny fallback pill (only appears if autoplay is blocked) -->
-  <button id="musicGate" class="musicGate hidden" type="button" aria-label="Enable music">
-    🎵 Tap to enable music
+  <!-- Premium music control: ALWAYS works (user gesture) -->
+  <button id="musicBtn" class="musicBtn" type="button" aria-label="Play or pause music">
+    ▶ Play music
   </button>
 
   <!-- Fake hacking terminal overlay -->
@@ -32,7 +31,7 @@
 
   <main class="shell">
     <header class="top">
-      <div class="badge">🔐 Valentine Vault</div>
+      <div class="badge">Valentine Vault 🔐 </div>
       <div class="sub">Decrypt the key to unlock the message.</div>
     </header>
 
@@ -97,11 +96,14 @@
         <h3>A letter for you</h3>
 
         <p class="note letterText">
-          My love, I’ve been thinking about us and I don’t want to keep it in my head anymore.
-          You make life feel softer, safer, and more exciting at the same time. I don’t want “almost”,
-          I want something real with you — intentional, loyal, and proud. So here I am, choosing you,
-          and asking you to choose me too.
-          <br><br>
+          You are my best friend, my patner, my soulmate. You have given me so much love and happiness 
+          and I can never thank you enough for that.You are the most beautiful person I have ever known inside and out.
+          You make me want to be a better person every single day to grow with you, to support you, to cherish you, 
+          to miam you ;).
+          Today and Always.
+
+          I love you with all my heart ❤️.
+          <br><br> 
           <span class="sig">— LAETITIA DANIELLE OUEMBE M.</span>
         </p>
 
@@ -111,7 +113,7 @@
       </div>
     </section>
 
-    <!-- STEP 3: ASK -->
+    <!-- STEP 3: ASK (NO PHOTOS HERE ANYMORE) -->
     <section class="card reveal hidden" id="stepAsk">
       <div class="sparkle" aria-hidden="true"></div>
 
@@ -128,14 +130,6 @@
         </div>
 
         <p class="micro" id="answerNote"></p>
-      </div>
-
-      <div class="collageWrap">
-        <h4 class="collageTitle">Memory files restoring…</h4>
-        <div class="collage two">
-          <div class="tile small hidden" id="tile1"><img src="photos/1.jpg" alt="photo 1"></div>
-          <div class="tile small hidden" id="tile2"><img src="photos/2.jpg" alt="photo 2"></div>
-        </div>
       </div>
     </section>
 
@@ -208,6 +202,6 @@
   </main>
 
   <canvas id="confetti"></canvas>
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=31"></script>
 </body>
 </html>
