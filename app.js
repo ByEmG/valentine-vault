@@ -1,36 +1,32 @@
 // ======================================================
-// Valentine Vault — updated version
-// - No case sensitivity
-// - Date accepts slashes/dashes; compares digits only
-// - Q4 requires ALL three checkboxes
-// - Timer + attempts + lockout
-// - Fake terminal animation on unlock
-// - Audio fades in on unlock (unlock.mp3)
-// - Photo collage reveals piece-by-piece (photos/1.jpg..4.jpg)
-// - Girlfriend ask YES/NO -> calendar
-// - Generate message -> teddy animation -> "He will be so happy ✅"
-// - After that message: autoplay happy.mp3 (max 60s)
+// Valentine Vault — final spec updates
+// - Background music loops across pages (bg.mp3)
+// - Date answer is 10/10/25 (digits: 101025)
+// - Helper text under Q3: "wow soon 6months" (in HTML)
+// - Only 2 images (photos/1.jpg, photos/2.jpg) small rectangles
+// - After unlock: show LETTER step alone -> Next -> girlfriend ask
+// - After teddy animation: background music ends, then video section appears
+// - When video plays: background music is paused/muted automatically
 // ======================================================
 
 const EXPECTED = {
   q1: "mimineee",
   q2: "brown",
-  q3_digits: "101025" // 10/10/26
+  q3_digits: "101025" // 10/10/25
 };
 
 const ATTEMPTS_MAX = 5;
-const TIMER_SECONDS = 180;        // 03:00
+const TIMER_SECONDS = 180;
 const LOCKOUT_MINUTES = 10;
 const STORAGE_KEY = "valentineVaultLockoutUntil";
 
-// You can rename these if you want
+// Optional text in generated message
 const HIM_NAME = "My Love";
 const HER_NAME = "Baby";
 
-// DOM helpers
+// DOM
 const $ = (id) => document.getElementById(id);
 
-// Elements
 const quizForm = $("quizForm");
 const statusEl = $("status");
 const resetBtn = $("resetBtn");
@@ -45,17 +41,21 @@ const attemptsEl = $("attempts");
 const terminal = $("terminal");
 const terminalBody = $("terminalBody");
 
+const bgAudio = $("bgAudio");
 const unlockAudio = $("unlockAudio");
-const happyAudio = $("happyAudio");
 
+// Unlocked flow steps
+const letterStep = $("letterStep");
+const nextBtn = $("nextBtn");
+
+const askStep = $("askStep");
 const yesBtn = $("yesBtn");
 const noBtn = $("noBtn");
 const answerNote = $("answerNote");
 
+const collageWrap = $("collageWrap");
 const tile1 = $("tile1");
 const tile2 = $("tile2");
-const tile3 = $("tile3");
-const tile4 = $("tile4");
 
 const final = $("final");
 const datePick = $("datePick");
@@ -68,6 +68,12 @@ const happyMsg = $("happyMsg");
 const copyBox = $("copyBox");
 const messageOut = $("messageOut");
 const copyBtn = $("copyBtn");
+
+// Video step
+const videoStep = $("videoStep");
+const playVideoBtn = $("playVideoBtn");
+const videoWrap = $("videoWrap");
+const compVideo = $("compVideo");
 
 // Checkboxes
 const c1 = $("c1"), c2 = $("c2"), c3 = $("c3");
@@ -82,10 +88,11 @@ let attempts = ATTEMPTS_MAX;
 let timeLeft = TIMER_SECONDS;
 let tickHandle = null;
 let lockedOut = false;
-let girlfriendAnswer = ""; // "YES" or "NO"
+
+let girlfriendAnswer = ""; // YES / NO
 
 // ------------------------
-// Utilities
+// Utils
 // ------------------------
 function normalize(str){
   return (str || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -111,7 +118,39 @@ function shake(el){
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 // ------------------------
-// Lockout handling
+// Background music
+// Browsers require a user gesture. We'll start it on Unlock success (submit click).
+// ------------------------
+async function startBgMusic(){
+  if(!bgAudio) return;
+  try{
+    if(bgAudio.paused){
+      bgAudio.volume = 0.75;
+      await bgAudio.play();
+    }
+  }catch{
+    // If blocked, that's fine. It may work once user interacts again.
+  }
+}
+
+// Stops background music (used after teddy animation before video)
+async function stopBgMusic(){
+  if(!bgAudio) return;
+  try{
+    // quick fade out
+    const steps = 12;
+    const startV = bgAudio.volume ?? 1;
+    for(let i=steps; i>=0; i--){
+      bgAudio.volume = startV * (i/steps);
+      await sleep(60);
+    }
+    bgAudio.pause();
+    bgAudio.currentTime = 0;
+  }catch{}
+}
+
+// ------------------------
+// Lockout
 // ------------------------
 function getLockoutUntil(){
   const v = localStorage.getItem(STORAGE_KEY);
@@ -231,13 +270,13 @@ async function terminalSequence(){
   terminalBody.textContent = "";
 
   const lines = [
-    ">> connecting to GIRLFRIEND_PROTOCOL…",
+    ">> connecting to SECURE_VAULT…",
     ">> verifying key fragments…",
     ">> checksum: OK",
-    ">> decrypting payload: LOVE_LETTER.enc",
+    ">> decrypting payload: LETTER_AND_PLAN.enc",
     ">> bypassing firewall: butterflies.exe",
     ">> elevating permissions: her_access=true",
-    ">> extracting memory files…",
+    ">> restoring memories…",
     ">> AUTH SUCCESS ✅",
     ">> opening vault…"
   ];
@@ -252,46 +291,20 @@ async function terminalSequence(){
   terminal.classList.add("hidden");
 }
 
-// ------------------------
-// Audio
-// ------------------------
-async function fadeInUnlockAudio(){
+// Optional unlock sound + fade (if file exists)
+async function playUnlockSound(){
   if(!unlockAudio) return;
   try{
-    unlockAudio.volume = 0;
+    unlockAudio.volume = 0.9;
     await unlockAudio.play();
-    const steps = 22;
-    for(let i=1;i<=steps;i++){
-      unlockAudio.volume = Math.min(1, i/steps);
-      await sleep(70);
-    }
-  }catch{
-    // If blocked, it's fine—visuals still run
-  }
-}
-
-async function playHappyAudioFor60s(){
-  if(!happyAudio) return;
-  try{
-    happyAudio.currentTime = 0;
-    happyAudio.volume = 1;
-    await happyAudio.play();
-    setTimeout(() => {
-      try{
-        happyAudio.pause();
-        happyAudio.currentTime = 0;
-      }catch{}
-    }, 60000);
-  }catch{
-    // Autoplay might still fail on some devices if user has muted settings
-  }
+  }catch{}
 }
 
 // ------------------------
-// Collage reveal
+// Collage reveal (2 tiles)
 // ------------------------
 async function revealCollage(){
-  const tiles = [tile1,tile2,tile3,tile4];
+  const tiles = [tile1, tile2];
   for(const t of tiles){
     t.classList.remove("hidden");
     await sleep(420);
@@ -313,7 +326,7 @@ function validate(){
 
   if(q1 !== EXPECTED.q1) return { ok:false, msg:"Q1 is wrong 😅" };
   if(q2 !== EXPECTED.q2) return { ok:false, msg:"Q2 is wrong 😅" };
-  if(q3 !== EXPECTED.q3_digits) return { ok:false, msg:"Q3 is wrong 😅 (use 10/10/26 style)" };
+  if(q3 !== EXPECTED.q3_digits) return { ok:false, msg:"Q3 is wrong 😅 (use 10/10/25 style)" };
 
   return { ok:true };
 }
@@ -335,9 +348,12 @@ async function unlock(){
   setStatus("ok", "Key accepted. Decrypting…");
   clearInterval(tickHandle);
 
+  // Start background music (loop) on user gesture (this click)
+  await startBgMusic();
+
   await Promise.all([
     terminalSequence(),
-    fadeInUnlockAudio()
+    playUnlockSound()
   ]);
 
   lockedView.classList.add("hidden");
@@ -345,17 +361,29 @@ async function unlock(){
 
   startConfetti();
   await revealCollage();
+  // NOTE: collage is hidden until Next -> ask step, we still prep tiles; revealCollage runs after unlock
+  // It won't show until collageWrap is unhidden.
 }
 
 // ------------------------
-// Calendar & message generation + teddy animation
+// Steps: letter -> next -> ask -> calendar
 // ------------------------
+function goToAskStep(){
+  letterStep.classList.add("hidden");
+  askStep.classList.remove("hidden");
+  collageWrap.classList.remove("hidden");
+  askStep.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
 function showCalendar(note){
   answerNote.textContent = note;
   final.classList.remove("hidden");
   final.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
+// ------------------------
+// Message generation + teddy animation + then stop music + show video
+// ------------------------
 function generateMessage(){
   const d = datePick.value;
   const t = timePick.value;
@@ -394,16 +422,42 @@ Let’s make it a real moment.
   // Teddy animation
   teddyScene.classList.remove("hidden");
   teddyScene.classList.remove("play");
-  void teddyScene.offsetWidth; // restart animation
+  void teddyScene.offsetWidth;
   teddyScene.classList.add("play");
 
-  // Show final happiness message + play happy song (max 60s)
+  // Show "He will be so happy ✅"
   happyMsg.classList.add("hidden");
   setTimeout(async () => {
     happyMsg.classList.remove("hidden");
     copyBox.scrollIntoView({behavior:"smooth", block:"start"});
-    await playHappyAudioFor60s();
+
+    // After this moment: end background music and reveal video section
+    await stopBgMusic();
+    videoStep.classList.remove("hidden");
+    videoStep.scrollIntoView({behavior:"smooth", block:"start"});
   }, 2400);
+}
+
+// ------------------------
+// Video playback behavior
+// Background is already stopped, but we still ensure it's paused/muted.
+// ------------------------
+async function playVideo(){
+  try{
+    if(bgAudio){
+      bgAudio.pause();
+      bgAudio.volume = 0;
+    }
+  }catch{}
+
+  videoWrap.classList.remove("hidden");
+  compVideo.currentTime = 0;
+
+  try{
+    await compVideo.play();
+  }catch{
+    // If autoplay fails, user can press play manually.
+  }
 }
 
 // ------------------------
@@ -413,6 +467,10 @@ function init(){
   attemptsEl.textContent = String(attempts);
   applyLockState();
   startTimer();
+
+  // Ensure unlocked steps start correctly
+  askStep.classList.add("hidden");
+  collageWrap.classList.add("hidden");
 
   quizForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -443,6 +501,10 @@ function init(){
     resetTimer();
   });
 
+  nextBtn.addEventListener("click", () => {
+    goToAskStep();
+  });
+
   yesBtn.addEventListener("click", () => {
     girlfriendAnswer = "YES";
     showCalendar("She said YES 💘 Now choose a date/time.");
@@ -463,6 +525,18 @@ function init(){
     }catch{
       alert("Copy failed. You can manually select and copy the text.");
     }
+  });
+
+  playVideoBtn.addEventListener("click", playVideo);
+
+  // If video starts playing by other means, ensure bg stays off
+  compVideo.addEventListener("play", () => {
+    try{
+      if(bgAudio){
+        bgAudio.pause();
+        bgAudio.volume = 0;
+      }
+    }catch{}
   });
 }
 
