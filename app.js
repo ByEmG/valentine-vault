@@ -366,12 +366,7 @@ async function playVideo(){
 }
 
 // Init
-// Init
 function init(){
-
-  // Start background music on the VERY first click anywhere (autoplay-safe)
-  document.addEventListener("click", () => startBgMusic(), { once: true });
-
   attemptsEl.textContent = String(attempts);
   applyLockState();
   startTimer();
@@ -381,10 +376,7 @@ function init(){
   quizForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if(lockedOut) return;
-    if(timeLeft <= 0){
-      setStatus("bad","Reset to try again.");
-      return;
-    }
+    if(timeLeft <= 0){ setStatus("bad","Reset to try again."); return; }
 
     const res = validate();
     if(res.ok){
@@ -397,8 +389,6 @@ function init(){
   });
 
   // keep your other listeners here (reset, next, yes/no, generate, copy, video...)
-}
-
 
   resetBtn.addEventListener("click", () => {
     quizForm.reset();
